@@ -3,8 +3,6 @@ GKSwstype=nul /opt/julia-1.8.5/bin/julia --threads 40 iterate_blockdata.jl
 """
 include("/net/home/lschulz/dimensionality/fundamentals.jl")
 
-include("/net/home/lschulz/reduce-daemensionality/struct_blockdata.jl")
-include("/net/home/lschulz/reduce-daemensionality/old/lSSA_deseasonalization.jl")
 
 #big parameters
 N = 5114

@@ -762,3 +762,173 @@ function plot_existing_data()
         end
     end
 end
+
+"""
+summarizing quantification
+"""
+
+#how does the value of the yearly maximum change linearly
+function maxima_linear_slope(p)
+    # Extract input parameters
+    spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa = p
+
+    # Calculate maximum year from the length of the time series
+    maxyear = Int(floor(N/365))
+
+    # Create an array of years from 1 to the maximum year
+    x = Float64[1:maxyear...]
+
+    # Extract harmonic trends for ssa and nlsa modes for all selected years
+    ssa_harm = hcat([ssa_trend_harm[i] for i in year_ind]...)
+    nlsa_harm = hcat([nlsa_trend_harm[i] for i in year_ind]...)
+
+    # Calculate the maximum value of each year for ssa and nlsa
+    ssa_yearmax = [maximum(ssa_harm[:,i]) for i in 1:maxyear]
+    nlsa_yearmax = [maximum(nlsa_harm[:,i]) for i in 1:maxyear]
+
+    # Calculate the index of the maximum value of each year for ssa and nlsa
+    ssa_argmax = [argmax(ssa_harm[:,i]) for i in 1:maxyear]
+    nlsa_argmax = [argmax(nlsa_harm[:,i]) for i in 1:maxyear]
+
+    # Perform linear regression on the year and ssa/nlsa maximum values
+    ssa_yearmax_linreg = llsq(x,Float64.(ssa_yearmax))[1]
+    nlsa_yearmax_linreg = llsq(x,Float64.(nlsa_yearmax))[1]
+
+    # Perform linear regression on the year and ssa/nlsa maximum value indices
+    ssa_argmax_linreg = llsq(x,Float64.(ssa_argmax))[1]
+    nlsa_argmax_linreg = llsq(x,Float64.(nlsa_argmax))[1]
+
+    # Return the linear regression slopes for ssa and nlsa year-max and argmax values
+    return [ssa_yearmax_linreg,nlsa_yearmax_linreg,ssa_argmax_linreg,nlsa_argmax_linreg]
+end
+
+#tables ssa/nsla separate
+#nr of harmonics
+#lin slope of year max
+#lin slope of year argmax
+
+
+function create_valuetables(N,W)
+    # Initialize output matrices with zeros
+    ssa_harmonics = zeros(Int64,n_spots,n_vars)
+    nlsa_harmonics = zeros(Int64,n_spots,n_vars)
+    ssa_max_slope = zeros(n_spots,n_vars)
+    nlsa_max_slope = zeros(n_spots,n_vars)
+    ssa_argmax_slope = zeros(n_spots,n_vars)
+    nlsa_argmax_slope = zeros(n_spots,n_vars)
+
+    for spot in 1:n_spots
+        for vari in 1:n_vars
+            try
+                # Get the parameters for the spot and variable
+                p = local_parameters(W,vari,spot,N,startyear)
+                
+                # Get the length of the harmonic vectors
+                ssa_h = length(p[end-5])
+                nlsa_h = length(p[end-4])
+                ssa_harmonics[spot,vari] = ssa_h
+                nlsa_harmonics[spot,vari] = nlsa_h
+                
+                ssa_yearmax_linreg,nlsa_yearmax_linreg,ssa_argmax_linreg,nlsa_argmax_linreg = maxima_linear_slope(p)
+
+                if ssa_h >= 2
+                    ssa_max_slope[spot,vari] = ssa_yearmax_linreg
+                    ssa_argmax_slope[spot,vari] = ssa_argmax_linreg
+                end
+                if nlsa_h >= 2
+                    nlsa_max_slope[spot,vari] = nlsa_yearmax_linreg
+                    nlsa_argmax_slope[spot,vari] = nlsa_argmax_linreg
+                end
+
+            catch e
+                # If an error occurs, do nothing
+                Nothing
+            end
+        end
+    end
+
+
+    # Return the output matrices
+    return ssa_harmonics,nlsa_harmonics,ssa_max_slope,nlsa_max_slope,ssa_argmax_slope,nlsa_argmax_slope
+end
+
+
+function heatmap_table(f,valuetable,titlestring)
+    stepnr = 10
+    stepsize = (maximum(valuetable)-minimum(valuetable))/(stepnr) 
+    bins = LinRange(minimum(valuetable)-stepsize,maximum(valuetable)+stepsize,stepnr+2)
+
+    cgradient = cgrad(:thermal, length(bins), categorical = true)
+    belongstobin(x) = findall(bins .- stepsize .<= x .< bins .+ stepsize)[end]
+
+    ax = Axis(f[1,1],
+    aspect = AxisAspect(1),
+    xticks = (1:length(spotslist),spotslist.*"\n".*IGBP_list),
+    xticklabelrotation = pi/2,
+    #xticklabelalign = (:left,:top),
+    xticklabelsize = 12,
+    yticks = (1:length(variables_names),variables_names),
+    #yticklabelalign = (:right,:center),
+    yticklabelsize = 12,
+    subtitle = titlestring
+    )
+
+
+
+    hm = heatmap!(ax,valuetable,
+    colormap = cgradient,
+    #colorrange = (minimum(valuetable),maximum(valuetable)),
+    aspect_ratio = 1,
+    grid = true,
+    framestyle = :box,
+    )
+
+    Colorbar(f[1,2], hm)
+
+    return f
+end
+
+ssa_harmonics,nlsa_harmonics,ssa_max_slope,nlsa_max_slope,ssa_argmax_slope,nlsa_argmax_slope = create_valuetables(N,W)
+
+dg = 3
+valuetable_list_ssa = [
+    Int.(ssa_harmonics),
+    round.(ssa_max_slope,digits=dg),
+    round.(ssa_argmax_slope,digits=dg),
+]
+valuetable_list_nlsa = [
+    Int.(nlsa_harmonics),
+    round.(nlsa_max_slope,digits=dg),
+    round.(nlsa_argmax_slope,digits=dg),
+]
+
+value_title_list_ssa = [
+    "SSA\n #harmonics",
+    "SSA\nlin max slope",
+    "SSA\nlin argmax slope",
+
+]
+
+value_title_list_nlsa = [
+    "NLSA\n #harmonics",
+    "NLSA\nlin max slope",
+    "NLSA\nlin argmax slope",
+
+]
+fs = 12
+padnr = 5
+
+f = Figure(resolution=(800,1400))
+for i = 1:3
+    valuetable = valuetable_list_ssa[i]
+    titlestring = value_title_list_ssa[i]
+    heatmap_table(f[i,1],valuetable,titlestring)
+end
+save(dir*"ssa.png",f)
+f = Figure(resolution=(800,1400))
+for i = 1:3
+    valuetable = valuetable_list_nlsa[i]
+    titlestring = value_title_list_nlsa[i]
+    heatmap_table(f[i,1],valuetable,titlestring)
+end
+save(dir*"nlsa.png",f)
