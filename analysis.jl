@@ -1,3 +1,4 @@
+
 include("/net/home/lschulz/dimensionality/fundamentals.jl")
 using CairoMakie
 
@@ -764,7 +765,7 @@ function plot_existing_data()
 end
 
 """
-summarizing quantification
+summarizing quantification + plotting heatmaps
 """
 
 #how does the value of the yearly maximum change linearly
@@ -853,12 +854,12 @@ function create_valuetables(N,W)
 end
 
 
-function heatmap_table(f,valuetable,titlestring)
-    stepnr = 10
+function heatmap_table(f,valuetable,titlestring,c = :solar)
+    stepnr = 100
     stepsize = (maximum(valuetable)-minimum(valuetable))/(stepnr) 
     bins = LinRange(minimum(valuetable)-stepsize,maximum(valuetable)+stepsize,stepnr+2)
 
-    cgradient = cgrad(:thermal, length(bins), categorical = true)
+    cgradient = cgrad(c, length(bins), categorical = true)
     belongstobin(x) = findall(bins .- stepsize .<= x .< bins .+ stepsize)[end]
 
     ax = Axis(f[1,1],
@@ -932,3 +933,129 @@ for i = 1:3
     heatmap_table(f[i,1],valuetable,titlestring)
 end
 save(dir*"nlsa.png",f)
+
+"""
+phase and amplitude investigations
+"""
+
+protophase(signal) =  atan.(imag(analyticsignal(Float64.(signal))),real(analyticsignal(Float64.(signal))))
+amplitude(signal) = median([maximum(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))])
+
+function amplitude_diff(signal)
+    max = [maximum(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))]
+    min = [minimum(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))]
+    return median(max.-min)
+end
+
+    argmax_position(signal) =  median([argmax(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))])
+    
+
+#create tensors for spot,vari : seasonal trends and n_harmonics
+function create_trend_tensors(N,W)
+    # Initialize output matrices with zeros
+    ssa_h = zeros(n_spots,n_vars)
+    nlsa_h = zeros(n_spots,n_vars)
+    ssa_trends = zeros(n_spots,n_vars,N)
+    nlsa_trends = zeros(n_spots,n_vars,N)
+
+    for spot in 1:n_spots
+        for vari in 1:n_vars
+            try
+                # Get the parameters for the spot and variable
+                p = local_parameters(W,vari,spot,N,startyear)
+                #p = rescale_local_parameters(p)
+                spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa = p
+
+                # Get the length of the harmonic vectors
+                ssa_h[spot,vari] = length(p[end-5])
+                nlsa_h[spot,vari] = length(p[end-4])
+                
+                # Get the trend vectors
+                ssa_trends[spot,vari,:] = ssa_trend_harm
+                nlsa_trends[spot,vari,:] = nlsa_trend_harm
+
+            catch e
+                # If an error occurs, do nothing
+                Nothing
+            end
+        end
+    end
+    return ssa_h,nlsa_h,ssa_trends,nlsa_trends
+end
+
+#bins of protophase - relative sin
+function phase_diff(phases)
+    rel_sin = sin.(2 .*pi./365 .*(1:N))
+    phasediff = phases .- rel_sin
+    #phasediff[phasediff .> pi] .-= 2*pi
+    #phasediff[phasediff .< -pi] .+= 2*pi
+    phasediff[phasediff .< 0] .+= 2*pi
+    stepsize = 0.01
+    bins = (0:stepsize:2*pi)
+    h =fit(Histogram,phasediff,bins)
+    h = normalize(h, mode=:pdf)
+    return bins[1:end-1],h.weights'
+end
+
+#fit cauchy to phase difference
+function phase_offset(bins,weights)
+
+    function cauchy(x,p) # fit cauchy / delta to a normalized phase difference
+        x0 = p[1]
+        gamma = p[2]
+        @. return 1/(pi*gamma*(1+((x-x0)/gamma)^2))
+    end
+
+    p0 = ones(2)
+    t = curve_fit(cauchy,bins[:],weights[:],p0)
+    params = t.param
+    return params[1],params[2],cauchy(bins,params)
+end
+
+function nlsa_overlay(M)
+    M[nlsa_h .< 2] .= NaN
+    return M
+end
+
+ssa_h,nlsa_h,ssa_trends,nlsa_trends = create_trend_tensors(N,W)
+jldsave(dir*"trends.jld2",ssa_h = ssa_h,nlsa_h = nlsa_h,ssa_trends = ssa_trends,nlsa_trends = nlsa_trends)
+
+
+
+
+ssa_ht = [protophase(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+nlsa_ht = [protophase(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+
+ssa_cauchyfit = [phase_offset(phase_diff(ssa_ht[i,j])...) for i in 1:n_spots, j in 1:n_vars]
+ssa_offset = [ssa_cauchyfit[i,j][1] for i in 1:n_spots, j in 1:n_vars]
+ssa_offset_strength = [ssa_cauchyfit[i,j][2] for i in 1:n_spots, j in 1:n_vars]
+ssa_offset_fit = [ssa_cauchyfit[i,j][3] for i in 1:n_spots, j in 1:n_vars]
+
+nlsa_cauchyfit = [phase_offset(phase_diff(nlsa_ht[i,j])...) for i in 1:n_spots, j in 1:n_vars]
+nlsa_offset = [nlsa_cauchyfit[i,j][1] for i in 1:n_spots, j in 1:n_vars]|> nlsa_overlay
+nlsa_offset_strength = [nlsa_cauchyfit[i,j][2] for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
+nlsa_offset_fit = [nlsa_cauchyfit[i,j][3] for i in 1:n_spots, j in 1:n_vars]
+
+ssa_amplitude = [amplitude_diff(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+nlsa_amplitude = [amplitude_diff(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
+
+nlsa_h = nlsa_h |> nlsa_overlay
+
+ssa_argmax_pos = [argmax_position(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+nlsa_argmax_pos = [argmax_position(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
+
+#plotting
+
+save(dir*"ssa_harmonics.png",heatmap_table(Figure(),ssa_h,"ssa harmonics"))
+save(dir*"nlsa_harmonics.png",heatmap_table(Figure(),nlsa_h,"nlsa harmonics"))
+save(dir*"ssa_offset_strength.png",heatmap_table(Figure(),ssa_offset_strength,"ssa offset strength"))
+save(dir*"nlsa_offset_strength.png",heatmap_table(Figure(),nlsa_offset_strength,"nlsa offset strength"))
+save(dir*"ssa_amplitude.png",heatmap_table(Figure(),ssa_amplitude,"ssa amplitude"))
+save(dir*"nlsa_amplitude.png",heatmap_table(Figure(),nlsa_amplitude,"nlsa amplitude"))
+
+
+save(dir*"ssa_offset.png",heatmap_table(Figure(),ssa_offset,"ssa offset", :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+save(dir*"nlsa_offset.png",heatmap_table(Figure(),nlsa_offset,"nlsa offset", :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+
+save(dir*"ssa_argmax_pos.png",heatmap_table(Figure(),ssa_argmax_pos,"ssa argmax position",:cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+save(dir*"nlsa_argmax_pos.png",heatmap_table(Figure(),nlsa_argmax_pos,"nlsa argmax position",:cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
