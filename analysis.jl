@@ -69,8 +69,8 @@ IGBP_list = [
     "DBF",
     "OSH",
     "ENF",
-    "unknown",
-    "unknown",
+    "CRO",
+    "CRO",
     "CRO",
     "ENF",
     "ENF",
@@ -95,6 +95,73 @@ year_ind =
     4749:5113,
     #5114:5478,
     #5479:5843
+]
+
+lattitude = 
+
+    [
+    50.5516,
+    50.3049,
+    46.8153,
+    47.1158,
+    47.4783,
+    47.2864,
+    51.0997,
+    50.9500,
+    51.0792,
+    50.9626,
+    55.4859,
+    36.9266,
+    61.8474,
+    43.549653,
+    43.496437,
+    40.5237,
+    45.9562,
+    56.4615,
+]
+
+longitude = 
+    [
+    4.7462,
+    5.9981,
+    9.8559,
+    8.5378,
+    8.3644,
+    7.7337,
+    10.9146,
+    13.5126,
+    10.4522,
+    13.5651,
+    11.6446,
+    -2.7521,
+    24.2948,
+    1.106096,
+    1.237878,
+    14.9574,
+    11.2813,
+    32.9221,
+]
+
+elevation = 
+    [
+    167,
+    493,
+    1639,
+    982,
+    689,
+    452,
+    161.5,
+    385,
+    430,
+    385,
+    40,
+    1600,
+    181,
+    250,
+    181 ,
+    20,
+    1353,
+    265,
 ]
 
 outdir="/net/scratch/lschulz/fluxfullset_midwithnee/"
@@ -889,57 +956,13 @@ function heatmap_table(f,valuetable,titlestring,c = :solar)
     return f
 end
 
-ssa_harmonics,nlsa_harmonics,ssa_max_slope,nlsa_max_slope,ssa_argmax_slope,nlsa_argmax_slope = create_valuetables(N,W)
-
-dg = 3
-valuetable_list_ssa = [
-    Int.(ssa_harmonics),
-    round.(ssa_max_slope,digits=dg),
-    round.(ssa_argmax_slope,digits=dg),
-]
-valuetable_list_nlsa = [
-    Int.(nlsa_harmonics),
-    round.(nlsa_max_slope,digits=dg),
-    round.(nlsa_argmax_slope,digits=dg),
-]
-
-value_title_list_ssa = [
-    "SSA\n #harmonics",
-    "SSA\nlin max slope",
-    "SSA\nlin argmax slope",
-
-]
-
-value_title_list_nlsa = [
-    "NLSA\n #harmonics",
-    "NLSA\nlin max slope",
-    "NLSA\nlin argmax slope",
-
-]
-fs = 12
-padnr = 5
-
-f = Figure(resolution=(800,1400))
-for i = 1:3
-    valuetable = valuetable_list_ssa[i]
-    titlestring = value_title_list_ssa[i]
-    heatmap_table(f[i,1],valuetable,titlestring)
-end
-save(dir*"ssa.png",f)
-f = Figure(resolution=(800,1400))
-for i = 1:3
-    valuetable = valuetable_list_nlsa[i]
-    titlestring = value_title_list_nlsa[i]
-    heatmap_table(f[i,1],valuetable,titlestring)
-end
-save(dir*"nlsa.png",f)
-
 """
 phase and amplitude investigations
 """
 
 protophase(signal) =  atan.(imag(analyticsignal(Float64.(signal))),real(analyticsignal(Float64.(signal))))
 amplitude(signal) = median([maximum(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))])
+argmax_position(signal) =  median([argmax(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))])
 
 function amplitude_diff(signal)
     max = [maximum(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))]
@@ -947,7 +970,6 @@ function amplitude_diff(signal)
     return median(max.-min)
 end
 
-    argmax_position(signal) =  median([argmax(hcat([signal[i] for i in year_ind]...)[:,i]) for i in 1: Int(floor(N/365))])
     
 
 #create tensors for spot,vari : seasonal trends and n_harmonics
@@ -1017,45 +1039,355 @@ function nlsa_overlay(M)
     return M
 end
 
-ssa_h,nlsa_h,ssa_trends,nlsa_trends = create_trend_tensors(N,W)
-jldsave(dir*"trends.jld2",ssa_h = ssa_h,nlsa_h = nlsa_h,ssa_trends = ssa_trends,nlsa_trends = nlsa_trends)
+function all_phase_plots()
+        
+    ssa_h,nlsa_h,ssa_trends,nlsa_trends = create_trend_tensors(N,W)
+    jldsave(dir*"trends.jld2",ssa_h = ssa_h,nlsa_h = nlsa_h,ssa_trends = ssa_trends,nlsa_trends = nlsa_trends)
+
+    ssa_ht = [protophase(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+    nlsa_ht = [protophase(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+
+    ssa_cauchyfit = [phase_offset(phase_diff(ssa_ht[i,j])...) for i in 1:n_spots, j in 1:n_vars]
+    ssa_offset = [ssa_cauchyfit[i,j][1] for i in 1:n_spots, j in 1:n_vars]
+    ssa_offset_strength = [ssa_cauchyfit[i,j][2] for i in 1:n_spots, j in 1:n_vars]
+    ssa_offset_fit = [ssa_cauchyfit[i,j][3] for i in 1:n_spots, j in 1:n_vars]
+
+    nlsa_cauchyfit = [phase_offset(phase_diff(nlsa_ht[i,j])...) for i in 1:n_spots, j in 1:n_vars]
+    nlsa_offset = [nlsa_cauchyfit[i,j][1] for i in 1:n_spots, j in 1:n_vars]|> nlsa_overlay
+    nlsa_offset_strength = [nlsa_cauchyfit[i,j][2] for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
+    nlsa_offset_fit = [nlsa_cauchyfit[i,j][3] for i in 1:n_spots, j in 1:n_vars]
+
+    ssa_amplitude = [amplitude_diff(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+    nlsa_amplitude = [amplitude_diff(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
+
+    nlsa_h = nlsa_h |> nlsa_overlay
+
+    ssa_argmax_pos = [argmax_position(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+    nlsa_argmax_pos = [argmax_position(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
+
+    #plotting
+
+    save(dir*"ssa_harmonics.png",heatmap_table(Figure(),ssa_h,"ssa harmonics"))
+    save(dir*"nlsa_harmonics.png",heatmap_table(Figure(),nlsa_h,"nlsa harmonics"))
+    save(dir*"ssa_offset_strength.png",heatmap_table(Figure(),ssa_offset_strength,"ssa offset strength"))
+    save(dir*"nlsa_offset_strength.png",heatmap_table(Figure(),nlsa_offset_strength,"nlsa offset strength"))
+    save(dir*"ssa_amplitude.png",heatmap_table(Figure(),ssa_amplitude,"ssa amplitude"))
+    save(dir*"nlsa_amplitude.png",heatmap_table(Figure(),nlsa_amplitude,"nlsa amplitude"))
+
+
+    save(dir*"ssa_offset.png",heatmap_table(Figure(),ssa_offset,"ssa offset", :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+    save(dir*"nlsa_offset.png",heatmap_table(Figure(),nlsa_offset,"nlsa offset", :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+
+    save(dir*"ssa_argmax_pos.png",heatmap_table(Figure(),ssa_argmax_pos,"ssa argmax position",:cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+    save(dir*"nlsa_argmax_pos.png",heatmap_table(Figure(),nlsa_argmax_pos,"nlsa argmax position",:cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+end
+
+"""
+bring it all together
+1) fundamental vs harmonic
+"""
+
+#function to deliver individual harmonics
+# needs to be apllied to non-rescaled p
+function individual_harmonics(p,rescale = false)
+    #redundant double calculation of rc because it simplifies code
+    spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa = p
+    l = embed_lag(signal,W)'
+    ssa_trend_rc = hcat([reconstructor((l * ssa_Eof)[:,i],ssa_Eof[:,i],N,W) for i in li_harmonics_ssa]...)
+    nlsa_trend_rc = hcat([reconstructor((l * nlsa_Eof)[:,i],nlsa_Eof[:,i],N,W) for i in li_harmonics_nlsa]...)
+    if rescale == true
+        m = means[spot,vari]
+        s = stds[spot,vari]
+        ssa_trend_rc = hcat([back_trafo(ssa_trend_rc[:,i],m,s) for i in 1:size(ssa_trend_rc,2)]...)
+        nlsa_trend_rc = hcat([back_trafo(nlsa_trend_rc[:,i],m,s) for i in 1:size(nlsa_trend_rc,2)]...)
+    end
+    return ssa_trend_rc,nlsa_trend_rc
+end
+
+
+#needs to be put in not rescaled p
+function plot_variable_dynamics_rescaled(F,p)
+    #2 plots of series similar to trend reconstruction
+    ssa_trend_rc,nlsa_trend_rc = individual_harmonics(p,false)
+    p = rescale_local_parameters(p)
+    spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa = p
+    
+    m = means[spot,vari]
+    s = stds[spot,vari]
+
+    ssa_fund = back_trafo(sum(ssa_trend_rc[:,1:2],dims=2)[:],m,s)
+    nlsa_fund = back_trafo(sum(nlsa_trend_rc[:,1:2],dims=2)[:],m,s)
+
+    seasonalitystring = ""
+    seasonalitystring *= "ssa f \t"*string(round.(freq_ssa,digits=1))*"\n"
+    seasonalitystring *= "nlsa f \t"*string(round.(freq_nlsa,digits=1))*"\n"
+    seasonalitystring *= "ssa var \t"*string(round.(ssa_harm_var,digits=1))*"\n"
+    seasonalitystring *= "nlsa var \t"*string(round.(nlsa_harm_var,digits=1))*"\n"
+
+    #the figure
+
+    offset = (maximum(signal)-minimum(signal)) * 1.5
+    lw = 3
+    lw_s = 1
+    ms = 4
+
+    textax = Axis(F[1,1])
+    hidedecorations!(textax)
+    text!(
+        textax, 0, 1,
+        text = seasonalitystring, 
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = 16
+    )
+
+    ax_time = Axis(F[2:3,1],
+    xticks = Int.(floor.(years[1]:3:years[end])),
+    xminorticksvisible = true,
+    xminorgridvisible = true,
+    xminorticks = IntervalsBetween(3),
+    xlabel = "time (a)",
+    ylabel = varname,
+    )
+
+
+    """
+    H
+    """
+    #signal background
+
+    scatter!(ax_time,years,signal .+ offset,linewidth=lw,
+    color=color_signal,marker=:x,markersize=ms,label="signal")
+    lines!(ax_time,years,signal .+ offset,linewidth=lw_s,
+    color=color_signal)
+
+    #ssa
+    lines!(ax_time,years,ssa_trend_harm .+ offset,linewidth=lw,
+    color=color_ssa,linestyle=:solid,label="ssa")
+
+    #nlsa
+    lines!(ax_time,years,nlsa_trend_harm .+ offset,linewidth=lw,
+    color=color_nlsa,linestyle=:solid,label="nlsa")
+
+    """
+    F
+    """
+    scatter!(ax_time,years,signal,linewidth=lw,
+    color=color_signal,marker=:x,markersize=ms,label="signal")
+    lines!(ax_time,years,signal,linewidth=lw_s,
+    color=color_signal)
+
+    #ssa
+    lines!(ax_time,years,ssa_fund,linewidth=lw,
+    color=color_ssa,linestyle=:solid,label="ssa")
+
+
+    #nlsa
+    lines!(ax_time,years,nlsa_fund,linewidth=lw,
+    color=color_nlsa,linestyle=:solid,label="nlsa")
 
 
 
+    text!(
+        ax_time, 0, 1,
+        text = "fundamental", 
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = 16
+    )
+    text!(
+        ax_time, 0, 0,
+        text = "harmonics", 
+        align = (:left, :bottom),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = 16
+    )
 
-ssa_ht = [protophase(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
-nlsa_ht = [protophase(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
+    text!(
+        ax_time, 0.95, 0.95,
+        text = "$(spotslist[spot])\n$(igbpclass)\n$(varname)", 
+        align = (:right, :top),
+        #offset = (4, -2),
+        space = :relative,
+        fontsize = 20
+    )
 
-ssa_cauchyfit = [phase_offset(phase_diff(ssa_ht[i,j])...) for i in 1:n_spots, j in 1:n_vars]
-ssa_offset = [ssa_cauchyfit[i,j][1] for i in 1:n_spots, j in 1:n_vars]
-ssa_offset_strength = [ssa_cauchyfit[i,j][2] for i in 1:n_spots, j in 1:n_vars]
-ssa_offset_fit = [ssa_cauchyfit[i,j][3] for i in 1:n_spots, j in 1:n_vars]
-
-nlsa_cauchyfit = [phase_offset(phase_diff(nlsa_ht[i,j])...) for i in 1:n_spots, j in 1:n_vars]
-nlsa_offset = [nlsa_cauchyfit[i,j][1] for i in 1:n_spots, j in 1:n_vars]|> nlsa_overlay
-nlsa_offset_strength = [nlsa_cauchyfit[i,j][2] for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
-nlsa_offset_fit = [nlsa_cauchyfit[i,j][3] for i in 1:n_spots, j in 1:n_vars]
-
-ssa_amplitude = [amplitude_diff(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
-nlsa_amplitude = [amplitude_diff(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
-
-nlsa_h = nlsa_h |> nlsa_overlay
-
-ssa_argmax_pos = [argmax_position(ssa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars]
-nlsa_argmax_pos = [argmax_position(nlsa_trends[i,j,:]) for i in 1:n_spots, j in 1:n_vars] |> nlsa_overlay
-
-#plotting
-
-save(dir*"ssa_harmonics.png",heatmap_table(Figure(),ssa_h,"ssa harmonics"))
-save(dir*"nlsa_harmonics.png",heatmap_table(Figure(),nlsa_h,"nlsa harmonics"))
-save(dir*"ssa_offset_strength.png",heatmap_table(Figure(),ssa_offset_strength,"ssa offset strength"))
-save(dir*"nlsa_offset_strength.png",heatmap_table(Figure(),nlsa_offset_strength,"nlsa offset strength"))
-save(dir*"ssa_amplitude.png",heatmap_table(Figure(),ssa_amplitude,"ssa amplitude"))
-save(dir*"nlsa_amplitude.png",heatmap_table(Figure(),nlsa_amplitude,"nlsa amplitude"))
+    return F
+end
 
 
-save(dir*"ssa_offset.png",heatmap_table(Figure(),ssa_offset,"ssa offset", :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
-save(dir*"nlsa_offset.png",heatmap_table(Figure(),nlsa_offset,"nlsa offset", :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+"""
+2) heatmap: SSA vs NLSA
+#take the H from the saved files
+"""
 
-save(dir*"ssa_argmax_pos.png",heatmap_table(Figure(),ssa_argmax_pos,"ssa argmax position",:cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
-save(dir*"nlsa_argmax_pos.png",heatmap_table(Figure(),nlsa_argmax_pos,"nlsa argmax position",:cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256))
+function heatmap_comparison(F,ssa_h,nlsa_h)
+    heatmap_table(F[1,1],ssa_h,"ssa h",c = :solar)
+    heatmap_table(F[1,2],nlsa_h,"nlsa h",c = :solar)
+    return F
+end
+
+"""
+3) lat long igbp
+"""
+
+
+function plot_errors(f,yeartable,x,title,textstrings,xlabel,ylabel)
+
+    ax = Axis(f[1,1],
+    title = title,
+    xlabel = xlabel,
+    ylabel = ylabel,
+    )
+
+    y = mean(yeartable,dims=1)[:]
+    ye = std(yeartable,dims=1)[:]
+
+    scatter!(ax,x[:],y[:],linewidth=2,
+    color=:black,marker=:x,markersize=4)
+
+    errorbars!(ax,x,y,ye, color = :grey)
+
+    for (i,xi) in enumerate(x)
+        text!(
+            ax, xi, y[i],
+            text = textstrings[i], 
+            align = (:center, :bottom),
+            offset = (0, 2),
+            #space = :relative,
+            fontsize = 12
+        )
+    end
+    return f
+end
+
+function plot_error_wrapper(f,spots_list,vari,stringlist)
+
+    Fi = load("/net/home/lschulz/logs/KW_2_15/trends.jld2")
+    ssa_trends = Fi["ssa_trends"]
+    ssa_h = Fi["ssa_h"]
+    nlsa_h = Fi["nlsa_h"]
+    nlsa_trends = Fi["nlsa_trends"]
+
+
+    # Calculate maximum year from the length of the time series
+    maxyear = Int(floor(N/365))
+
+    # Extract harmonic trends for ssa and nlsa modes for all selected years
+    ssa_harm = [ssa_trends[spot,vari,i] for i in year_ind, spot in spots_list]
+    nlsa_harm = [nlsa_trends[spot,vari,i] for i in year_ind, spot in spots_list]
+
+    ssa_maxs = [maximum(ssa_harm[i,j]) for i in 1:maxyear, j in 1:length(spots_list)]
+    nlsa_maxs = [maximum(nlsa_harm[i,j]) for i in 1:maxyear, j in 1:length(spots_list)]
+
+    ssa_argmaxs = [argmax(ssa_harm[i,j]) for i in 1:maxyear, j in 1:length(spots_list)]
+    nlsa_argmaxs = [argmax(nlsa_harm[i,j]) for i in 1:maxyear, j in 1:length(spots_list)]
+
+
+    plot_errors(f[1,1],ssa_maxs,lattitude[spots_list],"lat",stringlist,"lat","ssa max")
+    plot_errors(f[1,2],nlsa_maxs,lattitude[spots_list],"lat",stringlist,"lat","nlsa max")
+    plot_errors(f[2,1],ssa_argmaxs,lattitude[spots_list],"lat",stringlist,"lat","ssa argmax")
+    plot_errors(f[2,2],nlsa_argmaxs,lattitude[spots_list],"lat",stringlist,"lat","nlsa argmax")
+    plot_errors(f[3,1],ssa_maxs,longitude[spots_list],"long",stringlist,"long","ssa max")
+    plot_errors(f[3,2],nlsa_maxs,longitude[spots_list],"long",stringlist,"long","nlsa max")
+    plot_errors(f[4,1],ssa_argmaxs,longitude[spots_list],"long",stringlist,"long","ssa argmax")
+    plot_errors(f[4,2],nlsa_argmaxs,longitude[spots_list],"long",stringlist,"long","nlsa argmax")
+    return f
+end
+
+function plot_all_enf()
+    inds = findall(x->x=="ENF",IGBP_list)
+    for vari = 1:16
+    f = plot_error_wrapper(Figure(resolution=(1800,900)),inds,vari,[spotslist[i].* "\n$(elevation[i]) m" for i in inds])
+    save(dir*"$vari-$(variables_names[vari]).png",f)
+    end
+end
+
+"""
+4) vegetation response plots
+"""
+
+function plot_veg_response(f,spots_list,vari_1,vari_2,stringlist)
+
+    Fi = load("/net/home/lschulz/logs/KW_2_15/trends.jld2")
+    ssa_trends = Fi["ssa_trends"]
+    ssa_h = Fi["ssa_h"]
+    nlsa_h = Fi["nlsa_h"]
+    nlsa_trends = Fi["nlsa_trends"]
+
+    lags = 1:100
+
+    signal_1 = wholedata[:,spots_list,vari_1]'
+    signal_2 = wholedata[:,spots_list,vari_2]'
+
+    season_1_ssa = ssa_trends[spots_list,vari_1,:]
+    season_2_ssa = ssa_trends[spots_list,vari_2,:]
+
+    season_1_nlsa = nlsa_trends[spots_list,vari_1,:]
+    season_2_nlsa = nlsa_trends[spots_list,vari_2,:]
+
+    residual_1_ssa = signal_1 .- season_1_ssa
+    residual_2_ssa = signal_2 .- season_2_ssa
+
+    residual_1_nlsa = signal_1 .- season_1_nlsa
+    residual_2_nlsa = signal_2 .- season_2_nlsa
+
+    signal_cc = hcat([crosscor(signal_1[spot,:],signal_2[spot,:],lags) for spot in 1:length(spots_list)]...)
+    season_ssa_cc = hcat([crosscor(season_1_ssa[spot,:],season_2_ssa[spot,:],lags) for spot in 1:length(spots_list)]...)
+    season_nlsa_cc = hcat([crosscor(season_1_nlsa[spot,:],season_2_nlsa[spot,:],lags) for spot in 1:length(spots_list)]...)
+    residual_ssa_cc = hcat([crosscor(residual_1_ssa[spot,:],residual_2_ssa[spot,:],lags) for spot in 1:length(spots_list)]...)
+    residual_nlsa_cc = hcat([crosscor(residual_1_nlsa[spot,:],residual_2_nlsa[spot,:],lags) for spot in 1:length(spots_list)]...)
+
+    season_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_1]] .= NaN
+    season_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_2]] .= NaN
+    season_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_1]] .= NaN
+    season_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_2]] .= NaN
+    residual_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_1]] .= NaN
+    residual_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_2]] .= NaN
+    residual_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_1]] .= NaN
+    residual_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_2]] .= NaN
+
+
+    ax1 = Axis(f[1,1],
+    title = "signal",
+    xlabel = "lag",
+    ylabel = "cross correlation",
+    limits=(0,lags[end],0.1,1),
+    )
+
+    ax2 = Axis(f[1,2],
+    title = "season",
+    xlabel = "lag",
+    ylabel = "cross correlation",
+    limits=(0,lags[end],0.1,1),
+    )
+
+    ax3 = Axis(f[1,3],
+    title = "residual",
+    xlabel = "lag",
+    ylabel = "cross correlation",
+    limits=(0,lags[end],0.1,1),
+    )
+
+    series!(ax1, lags, signal_cc', solid_color = color_signal)
+    series!(ax2, lags, season_ssa_cc', solid_color = color_ssa)
+    series!(ax3, lags, residual_ssa_cc', solid_color = color_ssa)
+    series!(ax2, lags, season_nlsa_cc', solid_color = color_nlsa)
+    series!(ax3, lags, residual_nlsa_cc', solid_color = color_nlsa)
+
+    return f
+end
+
+function vegetation_response_enf()
+    inds = findall(x->x=="ENF",IGBP_list)
+
+    for (i,j) in [[1,16],[1,12],[1,13],[1,14]]
+    f = plot_veg_response(Figure(),inds,i,j,[""])
+    v1 = variables_names[i]
+    v2 = variables_names[j]
+    save(dir*"veg_response_enf_$(v1)_$v2.png",f)
+    end
+end
