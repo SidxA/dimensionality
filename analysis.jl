@@ -1131,6 +1131,7 @@ function plot_variable_dynamics_rescaled(F,p)
     lw_s = 1
     ms = 4
 
+    """
     textax = Axis(F[1,1])
     hidedecorations!(textax)
     text!(
@@ -1141,8 +1142,9 @@ function plot_variable_dynamics_rescaled(F,p)
         space = :relative,
         fontsize = 16
     )
+    """ 
 
-    ax_time = Axis(F[2:3,1],
+    ax_time = Axis(F[1,1],
     xticks = Int.(floor.(years[1]:3:years[end])),
     xminorticksvisible = true,
     xminorgridvisible = true,
@@ -1225,8 +1227,57 @@ end
 """
 
 function heatmap_comparison(F,ssa_h,nlsa_h)
-    heatmap_table(F[1,1],ssa_h,"ssa h",c = :solar)
-    heatmap_table(F[1,2],nlsa_h,"nlsa h",c = :solar)
+
+    nlsa_h[nlsa_h .< 2] .= NaN
+    ssa_h[ssa_h .< 2] .= NaN
+
+    fs = 10
+    ax = Axis(F[1,1],
+    aspect = AxisAspect(1),
+    xticks = (1:length(spotslist),spotslist.*" ".*IGBP_list),
+    xticklabelrotation = pi/2,
+    #xticklabelalign = (:left,:top),
+    xticklabelsize = fs,
+    yticks = (1:length(variables_names),variables_names),
+    #yticklabelalign = (:right,:center),
+    yticklabelsize = fs,
+    subtitle = "ssa"
+    )
+
+
+
+    hm = heatmap!(ax,ssa_h,
+    colormap = :solar,
+    colorrange = (0,12),
+    #colorrange = (minimum(valuetable),maximum(valuetable)),
+    aspect_ratio = 1,
+    grid = true,
+    framestyle = :box,
+
+    )
+
+    ax = Axis(F[1,2],
+    aspect = AxisAspect(1),
+    xticks = (1:length(spotslist),spotslist.*" ".*IGBP_list),
+    xticklabelrotation = pi/2,
+    #xticklabelalign = (:left,:top),
+    xticklabelsize = fs,
+    yticks = (1:length(variables_names),variables_names),
+    #yticklabelalign = (:right,:center),
+    yticklabelsize = fs,
+    subtitle = "nlsa"
+    )
+
+    hm = heatmap!(ax,nlsa_h,
+    colormap = :solar,
+    colorrange = (0,12),
+    #colorrange = (minimum(valuetable),maximum(valuetable)),
+    aspect_ratio = 1,
+    grid = true,
+    framestyle = :box,
+    )
+
+    Colorbar(F[2,1:2], hm, vertical = false)
     return F
 end
 
@@ -1235,21 +1286,17 @@ end
 """
 
 
-function plot_errors(f,yeartable,x,title,textstrings,xlabel,ylabel)
+function plot_errors(ax,yeartable,x,textstrings,color)
 
-    ax = Axis(f[1,1],
-    title = title,
-    xlabel = xlabel,
-    ylabel = ylabel,
-    )
+
 
     y = mean(yeartable,dims=1)[:]
     ye = std(yeartable,dims=1)[:]
 
     scatter!(ax,x[:],y[:],linewidth=2,
-    color=:black,marker=:x,markersize=4)
+    color=:black,marker=:x,markersize=10)
 
-    errorbars!(ax,x,y,ye, color = :grey)
+    errorbars!(ax,x,y,ye, color = color)
 
     for (i,xi) in enumerate(x)
         text!(
@@ -1264,7 +1311,7 @@ function plot_errors(f,yeartable,x,title,textstrings,xlabel,ylabel)
     return f
 end
 
-function plot_error_wrapper(f,spots_list,vari,stringlist)
+function plot_error_variables_loader(f,spots_list,vari)
 
     Fi = load("/net/home/lschulz/logs/KW_2_15/trends.jld2")
     ssa_trends = Fi["ssa_trends"]
@@ -1286,25 +1333,173 @@ function plot_error_wrapper(f,spots_list,vari,stringlist)
     ssa_argmaxs = [argmax(ssa_harm[i,j]) for i in 1:maxyear, j in 1:length(spots_list)]
     nlsa_argmaxs = [argmax(nlsa_harm[i,j]) for i in 1:maxyear, j in 1:length(spots_list)]
 
+    return ssa_maxs,nlsa_maxs,ssa_argmaxs,nlsa_argmaxs
 
-    plot_errors(f[1,1],ssa_maxs,lattitude[spots_list],"lat",stringlist,"lat","ssa max")
-    plot_errors(f[1,2],nlsa_maxs,lattitude[spots_list],"lat",stringlist,"lat","nlsa max")
-    plot_errors(f[2,1],ssa_argmaxs,lattitude[spots_list],"lat",stringlist,"lat","ssa argmax")
-    plot_errors(f[2,2],nlsa_argmaxs,lattitude[spots_list],"lat",stringlist,"lat","nlsa argmax")
-    plot_errors(f[3,1],ssa_maxs,longitude[spots_list],"long",stringlist,"long","ssa max")
-    plot_errors(f[3,2],nlsa_maxs,longitude[spots_list],"long",stringlist,"long","nlsa max")
-    plot_errors(f[4,1],ssa_argmaxs,longitude[spots_list],"long",stringlist,"long","ssa argmax")
-    plot_errors(f[4,2],nlsa_argmaxs,longitude[spots_list],"long",stringlist,"long","nlsa argmax")
-    return f
 end
 
-function plot_all_enf()
+function plot_error_wrapper_enf()
     inds = findall(x->x=="ENF",IGBP_list)
+    spots_list = inds
     for vari = 1:16
-    f = plot_error_wrapper(Figure(resolution=(1800,900)),inds,vari,[spotslist[i].* "\n$(elevation[i]) m" for i in inds])
-    save(dir*"$vari-$(variables_names[vari]).png",f)
+        f = Figure(resolution=(900,1200))
+        ssa_maxs,nlsa_maxs,ssa_argmaxs,nlsa_argmaxs = plot_error_variables_loader(f,spots_list,vari)
+
+
+        ax = Axis(f[1,1],
+        title = "amplitude lattitude dependency",
+        xlabel = "lattitude",
+        ylabel = "seasonal max",
+        )
+
+
+        stringlist = [spotslist[i].* "\n$(elevation[i]) m" for i in inds]
+
+        plot_errors(ax,ssa_maxs,lattitude[spots_list],stringlist,color_ssa)
+        plot_errors(ax,nlsa_maxs,lattitude[spots_list],stringlist,color_nlsa)
+
+        ax = Axis(f[1,2],
+        title = "phase lattitude dependency",
+        xlabel = "lattitude",
+        ylabel = "max position",
+        )
+
+        plot_errors(ax,ssa_argmaxs,lattitude[spots_list],stringlist,color_ssa)
+        plot_errors(ax,nlsa_argmaxs,lattitude[spots_list],stringlist,color_nlsa)
+
+        ax = Axis(f[2,1],
+        title = "amplitude longitude dependency",
+        xlabel = "longitude",
+        ylabel = "seasonal max",
+        )
+
+        plot_errors(ax,ssa_maxs,longitude[spots_list],stringlist,color_ssa)
+        plot_errors(ax,nlsa_maxs,longitude[spots_list],stringlist,color_nlsa)
+
+        ax = Axis(f[2,2],
+        title = "phase longitude dependency",
+        xlabel = "longitude",
+        ylabel = "max position",
+        )
+
+        plot_errors(ax,ssa_argmaxs,longitude[spots_list],stringlist,color_ssa)
+        plot_errors(ax,nlsa_argmaxs,longitude[spots_list],stringlist,color_nlsa)
+        
+        ax = Axis(f[3,1],
+        title = "amplitude elevation dependency",
+        xlabel = "elevation /m",
+        ylabel = "seasonal max",
+        )
+        stringlist = [spotslist[i].* "\n$(lattitude[i])\n$(longitude[i])" for i in inds]
+        plot_errors(ax,ssa_maxs,elevation[spots_list],stringlist,color_ssa)
+        plot_errors(ax,nlsa_maxs,elevation[spots_list],stringlist,color_nlsa)
+
+        ax = Axis(f[3,2],
+        title = "phase elevation dependency",
+        xlabel = "elevation /m",
+        ylabel = "max position",
+        )
+
+        plot_errors(f[3,2],ssa_argmaxs,elevation[spots_list],stringlist,color_ssa)
+        plot_errors(f[3,2],nlsa_argmaxs,elevation[spots_list],stringlist,color_nlsa)
+
+        save(dir*"locality_enf/$vari-$(variables_names[vari]).png",f)
     end
+    return nothing
 end
+
+"""
+3)b alternative lat long phase amplitude dependency
+"""
+
+
+function plot_errors(ax,yeartable,x,textstrings,color)
+
+    years = startyear:startyear+Int(floor(N/365)-1)
+
+    #y = maximum(yeartable,dims=3)[:]
+
+    #scatter!(ax,years,yeartable,linewidth=2,
+    #color=:black,marker=:x,markersize=10)
+
+    series!(ax,years,yeartable',linewidth=2,
+    solid_color=color,marker=:x,markersize=10)
+
+    #errorbars!(ax,x,y,ye, color = color)
+
+    
+    for (i,xi) in enumerate(x)
+        j = argmax(yeartable[:,i])
+        text!(
+            ax, years[j], yeartable[j,i],
+            text = textstrings[i], 
+            align = (:center, :bottom),
+            offset = (0, -50),
+            #space = :relative,
+            fontsize = 12
+        )
+    end
+    
+    return ax
+end
+
+function plot_error_wrapper_enf()
+    inds = findall(x->x=="ENF",IGBP_list)
+    spots_list = inds
+    for vari = 1:16
+        f = Figure(resolution=(900,1200))
+
+        ssa_maxs,nlsa_maxs,ssa_argmaxs,nlsa_argmaxs = plot_error_variables_loader(f,spots_list,vari)
+
+        stringlist = [spotslist[i].* "\n$(lattitude[i])\n$(longitude[i])\n$(elevation[i]) m" for i in inds]
+
+        year_offset = 2
+
+        ax = Axis(f[1,1],
+        title = "amplitude change ssa",
+        xlabel = "time /a",
+        ylabel = "seasonal max",
+        limits=(startyear-year_offset,startyear+Int(floor(N/365)-1)+year_offset,0.5,2),
+        )
+
+        plot_errors(ax,ssa_maxs,lattitude[spots_list],stringlist,color_ssa)
+
+        ax = Axis(f[1,2],
+        title = "amplitude change nlsa",
+        xlabel = "time /a",
+        ylabel = "seasonal max",
+        limits=(startyear-year_offset,startyear+Int(floor(N/365)-1)+year_offset,0.5,2),
+
+        )
+
+        plot_errors(ax,nlsa_maxs,lattitude[spots_list],stringlist,color_nlsa)
+
+
+        ax = Axis(f[2,1],
+        title = "phase change ssa",
+        xlabel = "time /a",
+        ylabel = "max position",
+        limits=(startyear-year_offset,startyear+Int(floor(N/365)-1)+year_offset,120,220),
+
+        )
+
+        plot_errors(ax,ssa_argmaxs,lattitude[spots_list],stringlist,color_ssa)
+
+
+        ax = Axis(f[2,2],
+        title = "phase change nlsa",
+        xlabel = "time /a",
+        ylabel = "max position",
+        limits=(startyear-year_offset,startyear+Int(floor(N/365)-1)+year_offset,120,220),
+
+        )
+
+        plot_errors(ax,nlsa_argmaxs,lattitude[spots_list],stringlist,color_nlsa)
+
+        save(dir*"locality_enf/alternative_$vari-$(variables_names[vari]).png",f)
+    end
+    return nothing
+end
+
 
 """
 4) vegetation response plots
@@ -1353,21 +1548,21 @@ function plot_veg_response(f,spots_list,vari_1,vari_2,stringlist)
 
     ax1 = Axis(f[1,1],
     title = "signal",
-    xlabel = "lag",
+    xlabel = "lag / d",
     ylabel = "cross correlation",
     limits=(0,lags[end],0.1,1),
     )
 
     ax2 = Axis(f[1,2],
     title = "season",
-    xlabel = "lag",
+    xlabel = "lag / d",
     ylabel = "cross correlation",
     limits=(0,lags[end],0.1,1),
     )
 
     ax3 = Axis(f[1,3],
     title = "residual",
-    xlabel = "lag",
+    xlabel = "lag / d",
     ylabel = "cross correlation",
     limits=(0,lags[end],0.1,1),
     )
@@ -1384,10 +1579,11 @@ end
 function vegetation_response_enf()
     inds = findall(x->x=="ENF",IGBP_list)
 
-    for (i,j) in [[1,16],[1,12],[1,13],[1,14]]
+    for (i,j) in [[1,16],[1,12],[1,13],[1,14],[2,16],[2,12],[2,13],[2,14],
+        [3,16],[3,12],[3,13],[3,14],[4,16],[4,12],[4,13],[4,14]]
     f = plot_veg_response(Figure(),inds,i,j,[""])
     v1 = variables_names[i]
     v2 = variables_names[j]
-    save(dir*"veg_response_enf_$(v1)_$v2.png",f)
+    save(dir*"response/veg_response_enf_$(v1)_$v2.png",f)
     end
 end
