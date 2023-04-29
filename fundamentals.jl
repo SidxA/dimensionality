@@ -275,7 +275,7 @@ end
 struct ssaholder
     f::PCA{Float32}
     function ssaholder(data::Matrix{Float32},k)
-        return new(fit(PCA,data',maxoutdim=k,method=:auto))
+        return new(fit(PCA,data',maxoutdim=k,method=:auto,pratio=1))
     end
 end
 
@@ -286,8 +286,14 @@ end
 
 #function that works on the object
 function put_EOF_ssa(d::matrixholder)
+    d.EOF = zeros(Float32,d.W,d.k)
+    d.lambda = zeros(Float32,d.k)
+
     ssa = ssaholder(d.emb,d.k)
-    d.EOF,d.lambda = gettheproj_ssa(ssa)
+    EOF,lambda = gettheproj_ssa(ssa)
+
+    d.EOF[:,1:size(EOF)[2]] = EOF
+    d.lambda[1:size(lambda)[1]] = lambda
 
 end
 
@@ -308,3 +314,31 @@ function save_results(d::matrixholder,name::String)
     EOF = Matrix(d.EOF),PC = Matrix(d.PC),RC = Matrix(d.RC),lambda = d.lambda,eps = d.eps, signal = d.signal)
 end
 
+"""
+Lowpass filtering the signals : doing 5 for 5/a for now
+"""
+
+function lowpass_filter(signal::Vector{T}, cutoff_frequency) where T<:Real
+    # Remove the mean of the signal
+    signal_mean = mean(signal)
+    signal .-= signal_mean
+
+    # Compute the Fourier transform of the signal
+    fourier = fft(signal) |> fftshift
+
+    # Compute the frequencies corresponding to the Fourier coefficients
+    Ts = 1 / 365.25
+    t = t0:Ts:(N-1)*Ts
+    freqs = fftfreq(length(t), 1.0/Ts) |> fftshift
+
+    # Find the indices of the Fourier coefficients corresponding to frequencies above the cutoff
+    inds = findall(x -> abs(x) > cutoff_frequency, freqs)
+
+    # Zero out the Fourier coefficients corresponding to frequencies above the cutoff
+    fourier[inds] .= 0
+
+    # Compute the inverse Fourier transform of the modified Fourier transform
+    backtransform = real.(ifft(fourier |> fftshift)) .+ signal_mean
+
+    return real(backtransform)
+end

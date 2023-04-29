@@ -1,6 +1,7 @@
 """
 GKSwstype=nul /opt/julia-1.8.5/bin/julia --threads 40 iterate_blockdata.jl 
 """
+
 include("/net/home/lschulz/dimensionality/fundamentals.jl")
 
 
@@ -12,14 +13,14 @@ running raw at the moment
 """
 
 #fluxnetfullset
-savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_raw.jld2"
+savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_lowpass5.jld2"
 wholedata = SharedArray{Float32}(load(savedirname)["data"])
 N,spots,vars = size(wholedata)
 
 """
 OUTDIR NEEDS TO HAVE /
 """
-outdir = "/net/scratch/lschulz/fluxfullset_midwithnee/"
+outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass5/"
 
 """
 put EVERYTHING variable TO KNOW in the package
