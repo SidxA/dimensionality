@@ -13,14 +13,14 @@ running raw at the moment
 """
 
 #fluxnetfullset
-savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_lowpass5.jld2"
+savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_lowpass7.jld2"
 wholedata = SharedArray{Float32}(load(savedirname)["data"])
 N,spots,vars = size(wholedata)
 
 """
 OUTDIR NEEDS TO HAVE /
 """
-outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass5/"
+outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass7/"
 
 """
 put EVERYTHING variable TO KNOW in the package

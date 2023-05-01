@@ -315,7 +315,16 @@ function save_results(d::matrixholder,name::String)
 end
 
 """
-Lowpass filtering the signals : doing 5 for 5/a for now
+Lowpass filtering the signals : doing 7 for 7/a for now
+
+
+wholedata_filtered = zeros(Float32,5114,18,16)
+for i in 1:18
+    for j in 1:16
+        wholedata_filtered[:,i,j] = lowpass_filter(wholedata[:,i,j], 7)
+    end
+end
+
 """
 
 function lowpass_filter(signal::Vector{T}, cutoff_frequency) where T<:Real
@@ -328,7 +337,7 @@ function lowpass_filter(signal::Vector{T}, cutoff_frequency) where T<:Real
 
     # Compute the frequencies corresponding to the Fourier coefficients
     Ts = 1 / 365.25
-    t = t0:Ts:(N-1)*Ts
+    t = 0:Ts:(N-1)*Ts
     freqs = fftfreq(length(t), 1.0/Ts) |> fftshift
 
     # Find the indices of the Fourier coefficients corresponding to frequencies above the cutoff
