@@ -317,11 +317,12 @@ end
 """
 Lowpass filtering the signals : doing 7 for 7/a for now
 
-
+savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_raw.jld2"
+wholedata = SharedArray{Float32}(load(savedirname)["data"])
 wholedata_filtered = zeros(Float32,5114,18,16)
 for i in 1:18
     for j in 1:16
-        wholedata_filtered[:,i,j] = lowpass_filter(wholedata[:,i,j], 7)
+        wholedata_filtered[:,i,j] = lowpass_filter(wholedata[:,i,j], 4)
     end
 end
 

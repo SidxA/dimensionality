@@ -13,7 +13,7 @@ running raw at the moment
 """
 
 #fluxnetfullset
-savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_lowpass7.jld2"
+savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_lowpass4.jld2"
 wholedata = SharedArray{Float32}(load(savedirname)["data"])
 N,spots,vars = size(wholedata)
 

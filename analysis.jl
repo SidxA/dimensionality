@@ -164,7 +164,7 @@ elevation =
     265,
 ]
 
-outdir="/net/scratch/lschulz/fluxfullset_midwithnee/"
+outdir="/net/scratch/lschulz/fluxfullset_midwithnee_lowpass7/"
 W = 2556
 N = 5114
 startyear = 2007
