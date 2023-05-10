@@ -998,6 +998,7 @@ function create_trend_tensors(N,W)
 
             catch e
                 # If an error occurs, do nothing
+                #print("error")
                 Nothing
             end
         end
@@ -1106,7 +1107,7 @@ end
 
 
 #needs to be put in not rescaled p
-function plot_variable_dynamics_rescaled(F,p)
+function plot_variable_dynamics_rescaled(F,p,fontsize,rel_offset)
     #2 plots of series similar to trend reconstruction
     ssa_trend_rc,nlsa_trend_rc = individual_harmonics(p,false)
     p = rescale_local_parameters(p)
@@ -1126,23 +1127,11 @@ function plot_variable_dynamics_rescaled(F,p)
 
     #the figure
 
-    offset = (maximum(signal)-minimum(signal)) * 1.5
+    offset = (maximum(signal)-minimum(signal)) * rel_offset
     lw = 3
     lw_s = 1
     ms = 4
 
-    """
-    textax = Axis(F[1,1])
-    hidedecorations!(textax)
-    text!(
-        textax, 0, 1,
-        text = seasonalitystring, 
-        align = (:left, :top),
-        offset = (4, -2),
-        space = :relative,
-        fontsize = 16
-    )
-    """ 
 
     ax_time = Axis(F[1,1],
     xticks = Int.(floor.(years[1]:3:years[end])),
@@ -1151,6 +1140,10 @@ function plot_variable_dynamics_rescaled(F,p)
     xminorticks = IntervalsBetween(3),
     xlabel = "time (a)",
     ylabel = varname,
+    xlabelsize = fontsize,
+    ylabelsize = fontsize,
+    xticklabelsize = fontsize-4,
+    yticklabelsize = fontsize-4,
     )
 
 
@@ -1160,63 +1153,75 @@ function plot_variable_dynamics_rescaled(F,p)
     #signal background
 
     scatter!(ax_time,years,signal .+ offset,linewidth=lw,
-    color=color_signal,marker=:x,markersize=ms,label="signal")
-    lines!(ax_time,years,signal .+ offset,linewidth=lw_s,
-    color=color_signal)
+    color=color_signal,marker=:x,markersize=ms)
+    li = lines!(ax_time,years,signal .+ offset,linewidth=lw_s,
+    color=color_signal,label="signal")
 
     #ssa
-    lines!(ax_time,years,ssa_trend_harm .+ offset,linewidth=lw,
-    color=color_ssa,linestyle=:solid,label="ssa")
+    li = lines!(ax_time,years,ssa_trend_harm .+ offset,linewidth=lw,
+    color=color_ssa,linestyle=:solid,label="SSA")
 
     #nlsa
-    lines!(ax_time,years,nlsa_trend_harm .+ offset,linewidth=lw,
-    color=color_nlsa,linestyle=:solid,label="nlsa")
+    li = lines!(ax_time,years,nlsa_trend_harm .+ offset,linewidth=lw,
+    color=color_nlsa,linestyle=:solid,label="NLSA")
 
     """
     F
     """
     scatter!(ax_time,years,signal,linewidth=lw,
-    color=color_signal,marker=:x,markersize=ms,label="signal")
+    color=color_signal,marker=:x,markersize=ms)
     lines!(ax_time,years,signal,linewidth=lw_s,
     color=color_signal)
 
     #ssa
     lines!(ax_time,years,ssa_fund,linewidth=lw,
-    color=color_ssa,linestyle=:solid,label="ssa")
+    color=color_ssa,linestyle=:solid)
 
 
     #nlsa
     lines!(ax_time,years,nlsa_fund,linewidth=lw,
-    color=color_nlsa,linestyle=:solid,label="nlsa")
+    color=color_nlsa,linestyle=:solid)
 
 
 
     text!(
         ax_time, 0, 1,
-        text = "fundamental", 
+        text = "harmonics", 
         align = (:left, :top),
         offset = (4, -2),
         space = :relative,
-        fontsize = 16
+        fontsize = fontsize
     )
     text!(
-        ax_time, 0, 0,
-        text = "harmonics", 
+        ax_time, 0, 0.02,
+        text = "fundamental", 
         align = (:left, :bottom),
         offset = (4, -2),
         space = :relative,
-        fontsize = 16
+        fontsize = fontsize
     )
 
     text!(
-        ax_time, 0.95, 0.95,
-        text = "$(spotslist[spot])\n$(igbpclass)\n$(varname)", 
+        ax_time, 0.95, 1,
+        text = "$(spotslist[spot]) $(igbpclass) $(varname)", 
         align = (:right, :top),
         #offset = (4, -2),
         space = :relative,
-        fontsize = 20
+        fontsize = fontsize
     )
 
+    hideydecorations!(ax_time, label = false)
+    hidespines!(ax_time, :t, :r)
+
+    tightlimits!(ax_time,Left(),Right())
+
+    axislegend(ax_time,
+        tellheight = false,
+        tellwidth = false,
+        margin = (4, 4, 4, 4),
+        halign = :right, valign = :bottom, orientation = :horizontal,
+        labelsize = fontsize-2,
+    )
     return F
 end
 
@@ -1276,6 +1281,103 @@ function heatmap_comparison(F,ssa_h,nlsa_h)
     grid = true,
     framestyle = :box,
     )
+
+    Colorbar(F[2,1:2], hm, vertical = false)
+    return F
+end
+
+"""
+2b) alternative heatmap: SSA vs NLSA
+#take the H from the saved files
+"""
+
+function heatmap_comparison_clipped(F,ssa_h,nlsa_h,highclip,fs,IGBP_list,spotslist,variables_names)
+
+    nlsa_h[nlsa_h .< 2] .= NaN
+    ssa_h[ssa_h .< 2] .= NaN
+
+    ax = Axis(F[1,1],
+    #aspect = AxisAspect(1),
+    xticks = (1:length(spotslist),spotslist.*" ".*IGBP_list),
+    xticklabelrotation = pi/2,
+    #xticklabelalign = (:left,:top),
+    xticklabelsize = fs,
+    yticks = (1:length(variables_names),variables_names),
+    #yticklabelalign = (:right,:center),
+    yticklabelsize = fs,
+    subtitle = "ssa"
+    )
+
+
+
+    hm = heatmap!(ax,ssa_h,
+    colormap = cgrad(:heat, highclip, categorical = true),
+    colorrange = (1,highclip),
+    highclip = :red,
+    lowclip = :white,
+    #colorrange = (minimum(valuetable),maximum(valuetable)),
+    #aspect_ratio = 1,
+    grid = true,
+    framestyle = :box,
+
+    )
+
+    for i in 1:size(ssa_h)[1]
+        str = ssa_h[i,:]
+        map(enumerate(str)) do (j, c)
+            if !isnan(c)
+                text!(ax,i,j,text="$(Int(c))",
+                align = (:center,:center),
+                color = :black,fontsize=fs,
+                )
+            end
+            #text!(ax,j,i,text=rich("$(lpad(string(c),padnr,"0"))",
+            #text!(ax,i,j,text="$c",
+            #color = :black,fontsize=fs)
+        end
+        #Label(f[1+i,1], rich(row_color_chars...),fontsize=18)
+    end
+
+    ax = Axis(F[1,2],
+    #aspect = AxisAspect(1),
+    xticks = (1:length(spotslist),spotslist.*" ".*IGBP_list),
+    xticklabelrotation = pi/2,
+    #xticklabelalign = (:left,:top),
+    xticklabelsize = fs,
+    yticks = (1:length(variables_names),variables_names),
+    #yticklabelalign = (:right,:center),
+    yticklabelsize = fs,
+    subtitle = "nlsa"
+    )
+
+    hm = heatmap!(ax,nlsa_h,
+    colormap = cgrad(:heat, highclip, categorical = true),
+    colorrange = (1,highclip),
+    highclip = :red,
+    lowclip = :white,
+    #colorrange = (minimum(valuetable),maximum(valuetable)),
+    #aspect_ratio = 1,
+    grid = true,
+    framestyle = :box,
+    )
+
+
+    for i in 1:size(nlsa_h)[1]
+        str = nlsa_h[i,:]
+        map(enumerate(str)) do (j, c)
+            if !isnan(c)
+                text!(ax,i,j,text="$(Int(c))",
+                align = (:center,:center),
+                color = :black,fontsize=fs,
+                )
+            end
+            #text!(ax,j,i,text=rich("$(lpad(string(c),padnr,"0"))",
+            #text!(ax,i,j,text="$c",
+            #color = :black,fontsize=fs)
+        end
+        #Label(f[1+i,1], rich(row_color_chars...),fontsize=18)
+    end
+
 
     Colorbar(F[2,1:2], hm, vertical = false)
     return F
@@ -1585,5 +1687,192 @@ function vegetation_response_enf()
     v1 = variables_names[i]
     v2 = variables_names[j]
     save(dir*"response/veg_response_enf_$(v1)_$v2.png",f)
+    end
+end
+
+"""
+mask for selection 
+"""
+function mask_vari(variables_names)
+    x = Int64[]
+    x = append!(x,findall(x->x=="GPP_DAY_1",variables_names))
+    x = append!(x,findall(x->x=="RECO_NIGHT_1",variables_names))
+    x = append!(x,findall(x->x=="NEE",variables_names))
+    x = append!(x,findall(x->x=="SW_IN",variables_names))
+    x = append!(x,findall(x->x=="TS",variables_names))
+    x = append!(x,findall(x->x=="SWC",variables_names))
+    return x,["GPP_day","RECO_night","NEE","SW_IN","TS","SWC"]
+end
+
+function mask_IGBP(IGBP_list)
+    enf = findall(x->x=="ENF",IGBP_list)
+    mf = findall(x->x=="MF",IGBP_list)
+    dbf = findall(x->x=="DBF",IGBP_list)
+    shr = findall(x->x=="SHR",IGBP_list)
+    cro = findall(x->x=="CRO",IGBP_list)
+    gra = findall(x->x=="GRA",IGBP_list)
+    osh = findall(x->x=="OSH",IGBP_list)
+    forest = append!(enf,mf,dbf)
+    grass = append!(shr,gra,osh,cro)
+    return forest,grass
+end
+
+#1. 4/a #2. 7/a
+# masks: igbp, vari, 
+# 1.     yes    no
+# 2.     no     yes
+# 3.     yes    yes
+# 4.     no     no
+
+function apply_masks_do_harmonics()
+    ssa_h,nlsa_h,ssa_trends,nlsa_trends = create_trend_tensors(N,W)
+
+    for mask1= [0,1], mask2 = [0,1]
+
+        variables_names = ["GPP_DAY_1","GPP_DAY_2","GPP_NIGHT_1","GPP_NIGHT_2",
+        "RECO_DAY_1","RECO_DAY_2","RECO_NIGHT_1","RECO_NIGHT_2",
+        "NEE","NEE_NIGHT","NEE_DAY",
+        "TA","SW_IN","LW_IN","SWC","TS"]
+
+        #medium length
+        spotslist = [
+            "BE-Lon",
+            "BE-Vie",
+            "CH-Dav",
+            "CH-Fru",
+            "CH-Lae",
+            "CH-Oe2",
+            "DE-Geb",
+            "DE-Gri",
+            "DE-Hai",
+            "DE-Tha",
+            "DK-Sor",
+            "ES-LJu",
+            "FI-Hyy",
+            "FR-Aur",
+            "FR-Lam",
+            "IT-BCi",
+            "IT-Lav",
+            "RU-Fyo",
+        ]
+
+        IGBP_list = [
+            "CRO",
+            "MF",
+            "ENF",
+            "GRA",
+            "MF",
+            "CRO",
+            "CRO",
+            "GRA",
+            "DBF",
+            "ENF",
+            "DBF",
+            "OSH",
+            "ENF",
+            "CRO",
+            "CRO",
+            "CRO",
+            "ENF",
+            "ENF",
+        ]
+
+        vari_list = 1:length(variables_names)
+
+        highclip = 9
+        fs = 8
+
+        if mask1 == true
+            forest_list,grass_list = mask_IGBP(IGBP_list)
+            spots_list = forest_list
+            spotslist = spotslist[spots_list]
+            IGBP_list = IGBP_list[forest_list]
+        else
+            spots_list = 1:length(spotslist)
+        end
+        if mask2 == true
+            vari_list,variables_names = mask_vari(variables_names)
+        else
+            vari_list = 1:length(variables_names)
+        end
+
+        F = Figure()
+        println(size(ssa_h[spots_list,vari_list]))
+        heatmap_comparison_clipped(F,ssa_h[spots_list,vari_list],nlsa_h[spots_list,vari_list],highclip,fs,IGBP_list,spotslist,variables_names)
+        save(dir*"raw_IGBP_$(mask1)_vari_$(mask2).png",F)
+    end
+
+
+
+end
+
+
+#iterate over the spots and variables
+function plot_existing_data_masked()
+
+
+    variables_names = ["GPP_DAY_1","GPP_DAY_2","GPP_NIGHT_1","GPP_NIGHT_2",
+    "RECO_DAY_1","RECO_DAY_2","RECO_NIGHT_1","RECO_NIGHT_2",
+    "NEE","NEE_NIGHT","NEE_DAY",
+    "TA","SW_IN","LW_IN","SWC","TS"]
+
+    #medium length
+    spotslist = [
+        "BE-Lon",
+        "BE-Vie",
+        "CH-Dav",
+        "CH-Fru",
+        "CH-Lae",
+        "CH-Oe2",
+        "DE-Geb",
+        "DE-Gri",
+        "DE-Hai",
+        "DE-Tha",
+        "DK-Sor",
+        "ES-LJu",
+        "FI-Hyy",
+        "FR-Aur",
+        "FR-Lam",
+        "IT-BCi",
+        "IT-Lav",
+        "RU-Fyo",
+    ]
+
+    IGBP_list = [
+        "CRO",
+        "MF",
+        "ENF",
+        "GRA",
+        "MF",
+        "CRO",
+        "CRO",
+        "GRA",
+        "DBF",
+        "ENF",
+        "DBF",
+        "OSH",
+        "ENF",
+        "CRO",
+        "CRO",
+        "CRO",
+        "ENF",
+        "ENF",
+    ]
+
+
+    forest_list,grass_list = mask_IGBP(IGBP_list)
+    spots_list = forest_list
+    #spotslist = spotslist[spots_list]
+    #IGBP_list = IGBP_list[forest_list]
+    vari_list,variables_names_2 = mask_vari(variables_names)
+
+    for vari = vari_list, spot = spots_list
+        try
+            savedirname = dir*"runs/spot$spot/"
+            create_combined_plot(spot,savedirname,W,vari,N)
+            println("YES spot $spot variable $vari")
+        catch
+            println("NO spot $spot variable $vari")
+        end
     end
 end
