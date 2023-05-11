@@ -1,5 +1,6 @@
 """
-GKSwstype=nul /opt/julia-1.8.5/bin/julia --threads 40 iterate_blockdata.jl 
+export JULIA_NUM_THREADS=1
+GKSwstype=nul /opt/julia-1.8.5/bin/julia --threads 64 iterate_blockdata.jl 
 """
 
 include("/net/home/lschulz/dimensionality/fundamentals.jl")
@@ -20,7 +21,7 @@ N,spots,vars = size(wholedata)
 """
 OUTDIR NEEDS TO HAVE /
 """
-outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass7/"
+outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"
 
 """
 put EVERYTHING variable TO KNOW in the package
@@ -110,7 +111,7 @@ end
 #Walist = [15,16,17]
 
 Threads.@threads for p=packaging(outdir)
-    for W = Int.(floor.(365.25 .* [7]))
+    for W = Int.(floor.(365.25 .* [1,7]))
         d = matrixholder(N,W,k)
         doitall(d,wholedata,p)
         println("done $(p.loc_ind) $(p.var_ind) $(W)")
