@@ -206,7 +206,11 @@ function harmonic_gaussian_per_mode(mode_spec,freqstart_w,freqend_w,freqs_w)
     spec[1:freqstart_w] .= 0
     spec[freqend_w:end] .= 0
 
+    try
     return fit_gauss(freqs_w,spec)
+    catch
+        return [0,0,0]
+    end
 end
 
 
@@ -295,7 +299,8 @@ function local_parameters(W,vari,spot,N,startyear)
     ssa_PC = file_ssa["PC"][:,ssa_indices]
     ssa_RC = file_ssa["RC"][:,ssa_indices]
     ssa_lambda = ssa_lambda[ssa_indices]
-    ssa_cap_var = sum(ssa_lambda)
+    #ssa_cap_var = sum(ssa_lambda)
+    ssa_cap_var = ssa_lambda
     ssa_rec = sum(ssa_RC,dims=2)[:]
 
     nlsa_lambda = file_nlsa["lambda"]
@@ -304,7 +309,9 @@ function local_parameters(W,vari,spot,N,startyear)
     nlsa_PC = file_nlsa["PC"][:,nlsa_indices]
     nlsa_RC = file_nlsa["RC"][:,nlsa_indices]
     nlsa_lambda = nlsa_lambda[nlsa_indices]
-    nlsa_cap_var = sum(nlsa_lambda)
+    #nlsa_cap_var = sum(nlsa_lambda)
+    nlsa_cap_var = nlsa_lambda
+
     nlsa_rec = sum(nlsa_RC,dims=2)[:]
     nlsa_eps = file_nlsa["eps"]
 
@@ -1737,7 +1744,7 @@ function mask_vari(variables_names)
     x = append!(x,findall(x->x=="SW_IN",variables_names))
     x = append!(x,findall(x->x=="TS",variables_names))
     x = append!(x,findall(x->x=="SWC",variables_names))
-    return x,["GPP_day","RECO_night","NEE","SW_IN","TS","SWC"]
+    return x,["GPP","RECO","NEE","SW_IN","TS","SWC"]
 end
 
 function mask_IGBP(IGBP_list)
@@ -2263,4 +2270,1105 @@ function mode_figure_paper(p)
 
     save(dir*"modes_raw.png",F)
 
+end
+
+"""
+introduction figure paper
+"""
+
+function intro_figure_paper(p,pic_name,varname_resolved)
+
+    #set_theme!(fonts = (; regular = "Computer Modern", bold = "Computer Modern"))
+
+    pic_name = "modes/"*pic_name
+    
+    p = rescale_local_parameters(p)
+    spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa = p
+
+    modenumber = 8
+    modenumber_k = 48
+    xstep_k = 16
+    k_xticks = (xstep_k:xstep_k:modenumber_k,string.(xstep_k:xstep_k:modenumber_k))
+    spec_xticks = (1:5,string.(1:5))
+    smallfs = 16
+    fs = 23
+    speclimits = (freq_domain_N[1],6,10^-4,1)
+    klimits = (0,modenumber_k+1,10^-4,1)
+    modeslimits = (0,2556/365.25,-0.04,(2*modenumber+2.5)*0.08)
+    modeyticks = (0.08:0.08*2:(2*modenumber+1)*0.08,string.(vcat(1:2:modenumber,"",1:2:modenumber)))
+    freqlimits = (1/10, 7,-0.2,modenumber*2+2.5)
+    gapsize = 8
+    lw = 4
+    ms = 12
+    scatterstep = 10
+    color_signal = "grey68"
+
+    F = Figure(resolution=(800,800))
+
+    #figure
+
+    ax_time = Axis(F[1,1:3],
+    xticks=Int.(floor.(years[1]:3:years[end])),
+    limits = (years[1],years[end],minimum(signal)*1.1,maximum(signal)*1.1),
+    xminorticksvisible = true,
+    xminorgridvisible = true,
+    xminorticks = IntervalsBetween(3),
+    xlabel="time [a]",
+    ylabel=varname_resolved,
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    #hideydecorations!(ax_time,label = false)
+
+    ax_spec = Axis(F[2,1:3],yscale=log10,
+    limits = speclimits,
+    xticks = spec_xticks,
+    xlabel="frequency [1/a]",
+    ylabel="relative power",
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    #hideydecorations!(ax_spec,label = false)
+
+    ax_k = Axis(F[2,4],yscale=log10,
+    limits = klimits,
+    xlabel="mode dim",
+    xlabelsize = fs,
+    xticks = k_xticks,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    hideydecorations!(ax_k,grid = false)
+
+    ax_modes = Axis(F[3:4,1:2],#yticksvisible = false,
+    #yticklabelsvisible = false,
+    xticks=0:Int(floor(W/365.25)),
+    yticks = modeyticks,
+    limits = modeslimits,
+    xlabel="time [a]",
+    ylabel="individual modes",
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    #hideydecorations!(ax_modes,label=false)
+
+    ax_freq = Axis(F[3:4,3:4],
+    limits=freqlimits,#,yscale=log10
+    xticks=1:7,yticksvisible = false,
+    yticklabelsvisible = false,
+    xlabel="frequency [1/a]",
+    ylabel="relative power",
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    hideydecorations!(ax_freq)
+
+    #ax_labels = Axis(F[3:4,5])
+    #hidedecorations!(ax_labels)
+
+    #plotting
+    #scatter!(ax_time,years[1:scatterstep:end],signal[1:scatterstep:end],color=color_signal,markersize = ms,marker=:x)
+    signal_l = lines!(ax_time,years,signal,color=color_signal,linewidth=lw,label = "signal")
+    ssa_l = lines!(ax_time,years,ssa_rec,color=color_ssa,linewidth=lw,label="SSA")
+    nlsa_l = lines!(ax_time,years,nlsa_rec,color=color_nlsa,linewidth=lw,label="NLSA")
+
+    lines!(ax_spec,freq_domain_N,spec_signal,color=color_signal,linewidth=lw,label = "signal")
+    signal_s = scatter!(ax_spec,freq_domain_N,spec_signal,color=color_signal,markersize = ms,marker=:x)
+    lines!(ax_spec,freq_domain_N,spec_ssa_rc,color=color_ssa,linewidth=lw,label="SSA")
+    lines!(ax_spec,freq_domain_N,spec_nlsa_rc,color=color_nlsa,linewidth=lw,label="NLSA")
+
+    lines!(ax_k,1:modenumber_k,ssa_cap_var[1:modenumber_k],color=color_ssa,linewidth=lw)
+    lines!(ax_k,1:modenumber_k,nlsa_cap_var[1:modenumber_k],color=color_nlsa,linewidth=lw)
+
+
+
+
+    #modes 
+
+    color_fit = "grey"
+    for i = 1:modenumber
+
+        mode = ssa_Eof[:,i]
+        Four = spec_ssa_eof[:,i]
+        #Four ./= maximum(abs.(Four)) 
+
+        years_modes = (1:length(mode)) ./ 365.25
+
+
+        lines!(ax_modes,years_modes,mode .+ (i*0.08),
+        color=color_ssa)
+        lines!(ax_freq,freqs_w,gauss(freqs_w,gaussian_ssa[i]) .+ i,color=color_fit,linewidth=5)
+        lines!(ax_freq,freqs_w,abs.(Four) .+ i, #[freqstart:end]
+        color=color_ssa)
+
+        mode = nlsa_Eof[:,i] 
+        Four = spec_nlsa_eof[:,i]
+
+
+        lines!(ax_modes,years_modes,mode .+ ((modenumber +1+i)*0.08),
+        color=color_nlsa)
+        lines!(ax_freq,freqs_w,gauss(freqs_w,gaussian_nlsa[i]) .+ i .+ modenumber .+1,color=color_fit,linewidth=5)
+        lines!(ax_freq,freqs_w,abs.(Four) .+ i .+ modenumber .+1, #[freqstart:end]
+        color=color_nlsa)
+
+    end
+
+    #height and freq
+    boxstring = "f \t height \n"#"peaks \n\n f \t height \n"
+    for k = modenumber:-1:1
+        boxstring *= string(round(gaussian_nlsa[k][1],digits=1))
+        boxstring *= "\t"
+        boxstring *= string(round(gaussian_nlsa[k][2],digits=1))
+        boxstring *= "\n"
+    end
+    boxstring*= "\n"
+    for k = modenumber:-1:1
+        boxstring *= string(round(gaussian_ssa[k][1],digits=1))
+        boxstring *= "\t"
+        boxstring *= string(round(gaussian_ssa[k][2],digits=1))
+        boxstring *= "\n"
+    end
+
+    text!(
+        ax_time, 0, 1,
+        #text = "signal and reconstructions", 
+        text = "(a)",
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+    text!(
+        ax_spec, 0, 1,
+        #text = "signal and reconstructions", 
+        text = "(b)",
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+    text!(
+        ax_k, 0.7, 1,
+        #text = "signal and reconstructions", 
+        text = "(c)",
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+    text!(
+        ax_modes, 0, 1,
+        text = "(d)", 
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+    text!(
+        ax_freq, 0, 1,
+        text = "(e)", 
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+    linkyaxes!(ax_spec, ax_k)
+
+
+
+
+
+    Legend(F[1,4],
+    #[lin, sca, [lin, sca], sca2],
+    #["a line", "some dots", "both together", "rect markers"])
+    [[signal_l,signal_s],ssa_l,nlsa_l],
+    ["signal","SSA","NLSA"],
+    "$(spotslist[spot])\n$(igbpclass)",
+    framevisible = false,
+    labelsize = fs,
+    titlesize=fs+4,
+    #titlehalign = :left,
+    #titlevalign = :bottom,
+    #titleposition = :left,
+    )
+    colgap!(F.layout, 1, gapsize) #colgap!(fig.layout, 1, Relative(0.15))
+    colgap!(F.layout, 2, gapsize)
+    colgap!(F.layout, 3, gapsize)
+    rowgap!(F.layout, 1, gapsize)
+    rowgap!(F.layout, 2, gapsize)
+    rowgap!(F.layout, 3, gapsize)
+
+
+
+
+    save(dir*pic_name*".png",F)
+
+end
+
+function create_paper_overview_plots()
+    """raw"""
+    outdir="/net/scratch/lschulz/fluxfullset_midwithnee/"
+
+    varname_r = "GPP"
+    spot = 9
+    vari = 1
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"raw_intro_$(spotname)_$(varname)",varname_r)
+
+    varname_r = "TS"
+    spot = 5
+    vari = 16
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"raw_resolved_$(spotname)_$(varname)",varname_r)
+
+    varname_r = "RECO"
+    spot = 5
+    vari = 7
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"raw_unresolved_$(spotname)_$(varname)",varname_r)
+
+    varname_r = "TS"
+    spot = 17
+    vari = 16
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"raw_measurement_$(spotname)_$(varname)",varname_r)
+
+    """filter"""
+    outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass7/"
+
+    varname_r = "GPP"
+    spot = 9
+    vari = 1
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"filter_intro_$(spotname)_$(varname)",varname_r)
+
+    varname_r = "TS"
+    spot = 5
+    vari = 16
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"filter_resolved_$(spotname)_$(varname)",varname_r)
+
+    varname_r = "RECO"
+    spot = 5
+    vari = 7
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"filter_unresolved_$(spotname)_$(varname)",varname_r)
+
+    varname_r = "TS"
+    spot = 17
+    vari = 16
+    spotname = spotslist[spot]
+    varname = variables_names[vari]
+    p = local_parameters(W,vari,spot,N,startyear)
+    intro_figure_paper(p,"filter_measurement_$(spotname)_$(varname)",varname_r)
+end
+
+"""
+crosscorrelation figure paper
+"""
+
+function plot_veg_response(vari_1,vari_2,savename)
+
+    spot = 18
+    spots_list = [17,18,3,10,13]
+    spots_list = [3]
+    #vari_1 = 1
+    #vari_2 = 12
+    stringlist = "test"
+    fontsize = 23
+    #savename = "t/$vari_2"
+    fs = 18
+
+    ylim1 = 0.4
+    gridwidth = 3
+    fontsize_plot = 10
+
+    lags = -60:60
+    xtiks = (-60:20:60,string.(-60:20:60))
+
+
+    f = Figure()
+
+    Fi = load("/net/home/lschulz/logs/KW_2_15/trends.jld2")
+    ssa_trends = Fi["ssa_trends"]
+    ssa_h = Fi["ssa_h"]
+    nlsa_h = Fi["nlsa_h"]
+    nlsa_trends = Fi["nlsa_trends"]
+
+
+
+    signal_1 = wholedata[:,spots_list,vari_1]'
+    signal_2 = wholedata[:,spots_list,vari_2]'
+
+    season_1_ssa = ssa_trends[spots_list,vari_1,:]
+    season_2_ssa = ssa_trends[spots_list,vari_2,:]
+
+    season_1_nlsa = nlsa_trends[spots_list,vari_1,:]
+    season_2_nlsa = nlsa_trends[spots_list,vari_2,:]
+
+    residual_1_ssa = signal_1 .- season_1_ssa
+    residual_2_ssa = signal_2 .- season_2_ssa
+
+    residual_1_nlsa = signal_1 .- season_1_nlsa
+    residual_2_nlsa = signal_2 .- season_2_nlsa
+
+    signal_cc = hcat([crosscor(signal_1[spot,:],signal_2[spot,:],lags) for spot in 1:length(spots_list)]...)
+    season_ssa_cc = hcat([crosscor(season_1_ssa[spot,:],season_2_ssa[spot,:],lags) for spot in 1:length(spots_list)]...)
+    season_nlsa_cc = hcat([crosscor(season_1_nlsa[spot,:],season_2_nlsa[spot,:],lags) for spot in 1:length(spots_list)]...)
+    residual_ssa_cc = hcat([crosscor(residual_1_ssa[spot,:],residual_2_ssa[spot,:],lags) for spot in 1:length(spots_list)]...)
+    residual_nlsa_cc = hcat([crosscor(residual_1_nlsa[spot,:],residual_2_nlsa[spot,:],lags) for spot in 1:length(spots_list)]...)
+
+    season_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_1]] .= NaN
+    season_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_2]] .= NaN
+    season_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_1]] .= NaN
+    season_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_2]] .= NaN
+    residual_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_1]] .= NaN
+    residual_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_2]] .= NaN
+    residual_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_1]] .= NaN
+    residual_nlsa_cc[:,(nlsa_h .< 2)[spots_list,vari_2]] .= NaN
+
+
+    ax1 = Axis(f[1,1],
+    #title = "signal",
+    titlesize = fontsize,
+    xlabel = "lag / d",
+    ylabel = "cross corr",
+    limits=(lags[1],lags[end],ylim1,1.05),
+    yticks = (ylim1:0.2:1,string.(ylim1:0.2:1)),
+    xticks = xtiks,
+    yticklabelsize = fontsize,
+    ylabelsize = fontsize,
+    xticklabelsize = fontsize,
+    xlabelsize = fontsize,
+    xgridwidth = gridwidth,
+    ygridwidth = gridwidth,
+    )
+
+
+    series!(ax1, lags, signal_cc', solid_color = color_signal)
+    series!(ax1, lags, season_ssa_cc', solid_color = color_ssa)
+    series!(ax1, lags, residual_nlsa_cc', solid_color = color_nlsa)
+    series!(ax1, lags, residual_ssa_cc', solid_color = color_ssa)
+    series!(ax1, lags, season_nlsa_cc', solid_color = color_nlsa)
+
+    amax_signal = argmax(signal_cc)
+    amax_ssa = argmax(season_ssa_cc)
+    amax_ssa_residual = argmax(residual_ssa_cc)
+    amax_nlsa = argmax(season_nlsa_cc)
+    amax_nlsa_residual = argmax(residual_nlsa_cc)
+
+    scatter!(ax1,lags[amax_ssa],season_ssa_cc[amax_ssa],color = color_ssa,markersize = 10,marker=:x)
+    scatter!(ax1,lags[amax_ssa_residual],residual_ssa_cc[amax_ssa_residual],color = color_ssa,markersize = 10,marker=:x)
+    scatter!(ax1,lags[amax_signal],signal_cc[amax_signal],color = color_signal,markersize = 10,marker=:x)
+    scatter!(ax1,lags[amax_nlsa],season_nlsa_cc[amax_nlsa],color = color_nlsa,markersize = 10,marker=:x)
+    scatter!(ax1,lags[amax_nlsa_residual],residual_nlsa_cc[amax_nlsa_residual],color = color_nlsa,markersize = 10,marker=:x)
+
+
+    #text!(ax1,lags[amax_signal],signal_cc[amax_signal],text="signal",align = (:center,:bottom),color = color_signal,fontsize=fontsize)
+    #text!(ax1,lags[amax_ssa],season_ssa_cc[amax_ssa],text="SSA",align = (:center,:bottom),color = color_ssa,fontsize=fontsize)
+    #text!(ax1,lags[amax_ssa_residual],residual_ssa_cc[amax_ssa_residual],text="SSA residual",align = (:center,:bottom),color = color_ssa,fontsize=fontsize)
+    #text!(ax1,lags[amax_nlsa],season_nlsa_cc[amax_nlsa],text="NLSA",align = (:center,:bottom),color = color_nlsa,fontsize=fontsize)
+
+    text!(
+        ax1, 0.15, 0.75,
+        #text = "signal and reconstructions", 
+        text = "cycle",
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+    text!(
+        ax1, 0.4, 0.55,
+        #text = "signal and reconstructions", 
+        text = "signal",
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+    text!(
+        ax1, 0.6, 0.3,
+        #text = "signal and reconstructions", 
+        text = "residual",
+        align = (:left, :top),
+        offset = (4, -2),
+        space = :relative,
+        fontsize = fs
+    )
+
+
+    #series!(ax1, lags, season_nlsa_cc', solid_color = color_nlsa)
+    #series!(ax1, lags, residual_nlsa_cc', solid_color = color_nlsa)
+
+    #hideydecorations!(ax2,grid = false)
+    #hideydecorations!(ax3,grid = false)
+
+    ax2 = Axis(f[1,2:3],
+    #title = "signal",
+    titlesize = fontsize,
+    xlabel = "lag / d",
+    ylabel = "response value",
+    #limits=(lags[1],lags[end],ylim1,1),
+    #yticks = (ylim1:0.2:1,string.(ylim1:0.2:1)),
+    #xticks = xtiks,
+    yticklabelsize = fontsize,
+    ylabelsize = fontsize,
+    xticklabelsize = fontsize,
+    xlabelsize = fontsize,
+    xgridwidth = gridwidth,
+    ygridwidth = gridwidth,
+    )
+
+
+
+    #linkyaxes!(ax1, ax2)
+    hideydecorations!(ax2,ticks = false,ticklabels=false,grid = false)
+
+    li_x = [0]
+    li_y = []
+    for spot = mask_IGBP(IGBP_list)[1]
+        if nlsa_h[spot,vari_1] > 2 && nlsa_h[spot,vari_2] > 2
+
+            text = spotslist[spot]*" "*IGBP_list[spot]
+            season_1_ssa = ssa_trends[spot,vari_1,:]
+            season_2_ssa = ssa_trends[spot,vari_2,:]
+
+                
+            season_1_nlsa = nlsa_trends[spot,vari_1,:]
+            season_2_nlsa = nlsa_trends[spot,vari_2,:]
+
+            season_ssa_cc = crosscor(season_1_ssa,season_2_ssa,lags)
+            season_nlsa_cc = crosscor(season_1_nlsa,season_2_nlsa,lags)
+
+            #season_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_1]] .= NaN
+            #season_ssa_cc[:,(ssa_h .< 2)[spots_list,vari_2]] .= NaN
+
+            amax_ssa = argmax(season_ssa_cc)
+            amax_nlsa = argmax(season_nlsa_cc)
+
+            x = lattitude[spot]
+            value_ssa = season_ssa_cc[amax_ssa]
+            value_nlsa = season_nlsa_cc[amax_nlsa]
+
+            lag_ssa = lags[amax_ssa]
+            lag_nlsa = lags[amax_nlsa]
+
+            for v in [lag_ssa,lag_nlsa]
+                if !isnan(v) && v != lags[1]
+                    li_x = append!(li_x,v)
+                end
+            end
+
+            for v in [value_ssa,value_nlsa]
+                if !isnan(v)
+                    li_y = append!(li_y,v)
+                end
+            end
+
+            scatter!(ax2,lag_ssa,value_ssa,color = color_ssa,markersize = 10,marker=:x)
+            scatter!(ax2,lag_nlsa,value_nlsa,color = color_nlsa,markersize = 10,marker=:x)
+
+            text!(ax2,lag_ssa,value_ssa,text=text,
+            align = (:center,:bottom),color = color_ssa,fontsize=fontsize_plot)
+
+            try
+                text!(ax2,lag_nlsa,value_nlsa,text=text,
+                align = (:center,:bottom),color = color_nlsa,fontsize=fontsize_plot)
+            catch
+                println("not isnan $spot")
+            end
+        end
+    end
+
+    println(li_x)
+    println(li_y)
+
+    x1 = minimum(li_x)
+    x2 = maximum(li_x)
+    y1 = minimum(li_y)
+    y2 = maximum(li_y)
+
+    #println(x1)
+    #println(x2)
+    #println(y1)
+    #println(y2)
+
+    xpoints = [x1,x2,x2,x1,x1]
+    ypoints = [y1,y1,y2,y2,y1]
+
+    lines!(ax2,xpoints,ypoints,color=:black,linewidth=2)
+    lines!(ax1,xpoints,ypoints,color=:black,linewidth=2)
+
+
+    save(dir*savename*".png",f)
+end
+
+"""
+plot_veg_response(13,1,"cc_SW-GPP")
+plot_veg_response(13,5,"cc_SW-RECO")
+plot_veg_response(13,9,"cc_SW-NEE")
+plot_veg_response(13,12,"cc_SW-TA")
+plot_veg_response(13,16,"cc_SW-TS")
+plot_veg_response(12,1,"cc_TA-GPP")
+plot_veg_response(16,1,"cc_TS-GPP")
+"""
+
+"""
+modes figures
+FONTS
+set_theme!(fonts=(
+    regular="Latin Modern Roman",
+    bold = "Latin Modern Roman Bold",
+    italic = "Latin Modern Roman Italic",
+    bold_italic = "Latin Modern Roman Bold Italic",))
+
+save(dir*"test.png",mode_figure(Figure(resolution=(800,1000)),p,"GPP"))
+"""
+
+function mode_figure(F,p,varname_resolved)
+
+    p = rescale_local_parameters(p)
+    spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa = p
+
+    modenumber = 12
+    modenumber_k = 48
+    xstep_k = 16
+    k_xticks = (xstep_k:xstep_k:modenumber_k,string.(xstep_k:xstep_k:modenumber_k))
+    spec_xticks = (1:6,string.(1:6))
+    smallfs = 16
+    fs = 23
+    speclimits = (freq_domain_N[1],6.05,10^-4,1)
+    klimits = (0,modenumber_k+1,10^-4,1)
+    modeslimits = (0,2556/365.25,-0.04,(2*modenumber+2.5)*0.08)
+    modeyticks = (vcat(0.08:0.08*2:(modenumber)*0.08,(modenumber+2)*0.08:0.08*2:(2*modenumber+1)*0.08),string.(vcat(1:2:modenumber,1:2:modenumber)))
+    freqlimits = (1/10, 7,-0.2,modenumber*2+2.5)
+    gapsize = 8
+    lw = 4
+    ms = 12
+    scatterstep = 10
+    color_signal = "grey68"
+
+    
+
+    #figure
+
+    ax_time = Axis(F[1:2,1:4],
+    xticks=Int.(floor.(years[1]:3:years[end])),
+    limits = (years[1],years[end],minimum(signal)*1.1,maximum(signal)*1.1),
+    xminorticksvisible = true,
+    xminorgridvisible = true,
+    xminorticks = IntervalsBetween(3),
+    xlabel="time [a]",
+    ylabel=varname_resolved,
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    hideydecorations!(ax_time,ticks = false,ticklabels=false,grid=false)
+
+    ax_spec = Axis(F[3:4,1:3],yscale=log10,
+    limits = speclimits,
+    xticks = spec_xticks,
+    xminorticksvisible = true,
+    xminorgridvisible = true,
+    xminorticks = IntervalsBetween(4),
+    xlabel="frequency [1/a]",
+    ylabel="relative power",
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    hideydecorations!(ax_spec,ticks = false,ticklabels=false,grid=false)
+
+    ax_k = Axis(F[3:4,4],yscale=log10,
+    limits = klimits,
+    xminorticksvisible = true,
+    xminorgridvisible = true,
+    xminorticks = IntervalsBetween(2),
+    xlabel="dim",
+    xlabelsize = fs,
+    xticks = k_xticks,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    hideydecorations!(ax_k,grid=false)
+
+
+    ax_modes = Axis(F[5:9,1:2],#yticksvisible = false,
+    #yticklabelsvisible = false,
+    xticks=0:Int(floor(W/365.25)),
+    yticks = modeyticks,
+    limits = modeslimits,
+    xminorticksvisible = true,
+    xminorgridvisible = true,
+    xminorticks = IntervalsBetween(2),
+    xlabel="time [a]",
+    ylabel="individual modes",
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    hideydecorations!(ax_modes,ticks = false,ticklabels=false,grid=false)
+
+    ax_freq = Axis(F[5:9,3:4],
+    limits=freqlimits,#,yscale=log10
+    xticks=1:7,yticksvisible = false,
+    yticklabelsvisible = false,
+    xlabel="frequency [1/a]",
+    ylabel="relative power",
+    xlabelsize = fs,
+    xticklabelsize = fs,
+    yticklabelsize = fs,
+    ylabelsize = fs,)
+
+    hideydecorations!(ax_freq)
+
+    #ax_labels = Axis(F[3:4,5])
+    #hidedecorations!(ax_labels)
+
+    #plotting
+    #scatter!(ax_time,years[1:scatterstep:end],signal[1:scatterstep:end],color=color_signal,markersize = ms,marker=:x)
+    signal_l = lines!(ax_time,years,signal,color=color_signal,linewidth=lw,label = "signal")
+    ssa_l = lines!(ax_time,years,ssa_rec,color=color_ssa,linewidth=lw,label="SSA")
+    nlsa_l = lines!(ax_time,years,nlsa_rec,color=color_nlsa,linewidth=lw,label="NLSA")
+
+    lines!(ax_spec,freq_domain_N,spec_signal,color=color_signal,linewidth=lw,label = "signal")
+    signal_s = scatter!(ax_spec,freq_domain_N,spec_signal,color=color_signal,markersize = ms,marker=:x)
+    lines!(ax_spec,freq_domain_N,spec_ssa_rc,color=color_ssa,linewidth=lw,label="SSA")
+    lines!(ax_spec,freq_domain_N,spec_nlsa_rc,color=color_nlsa,linewidth=lw,label="NLSA")
+
+    lines!(ax_k,1:modenumber_k,ssa_cap_var[1:modenumber_k],color=color_ssa,linewidth=lw)
+    lines!(ax_k,1:modenumber_k,nlsa_cap_var[1:modenumber_k],color=color_nlsa,linewidth=lw)
+
+
+
+
+    #modes 
+
+    color_fit = "grey"
+    for i = 1:modenumber
+
+        mode = ssa_Eof[:,i]
+        Four = spec_ssa_eof[:,i]
+        #Four ./= maximum(abs.(Four)) 
+
+        years_modes = (1:length(mode)) ./ 365.25
+
+
+        lines!(ax_modes,years_modes,mode .+ (i*0.08),
+        color=color_ssa)
+        lines!(ax_freq,freqs_w,gauss(freqs_w,gaussian_ssa[i]) .+ i,color=color_fit,linewidth=5)
+        lines!(ax_freq,freqs_w,abs.(Four) .+ i, #[freqstart:end]
+        color=color_ssa)
+
+        mode = nlsa_Eof[:,i] 
+        Four = spec_nlsa_eof[:,i]
+
+
+        lines!(ax_modes,years_modes,mode .+ ((modenumber +1+i)*0.08),
+        color=color_nlsa)
+        lines!(ax_freq,freqs_w,gauss(freqs_w,gaussian_nlsa[i]) .+ i .+ modenumber .+1,color=color_fit,linewidth=5)
+        lines!(ax_freq,freqs_w,abs.(Four) .+ i .+ modenumber .+1, #[freqstart:end]
+        color=color_nlsa)
+
+    end
+
+    #height and freq
+    boxstring = "f \t height \n"#"peaks \n\n f \t height \n"
+    for k = modenumber:-1:1
+        boxstring *= string(round(gaussian_nlsa[k][1],digits=1))
+        boxstring *= "\t"
+        boxstring *= string(round(gaussian_nlsa[k][2],digits=1))
+        boxstring *= "\n"
+    end
+    boxstring*= "\n"
+    for k = modenumber:-1:1
+        boxstring *= string(round(gaussian_ssa[k][1],digits=1))
+        boxstring *= "\t"
+        boxstring *= string(round(gaussian_ssa[k][2],digits=1))
+        boxstring *= "\n"
+    end
+    linkyaxes!(ax_spec, ax_k)
+
+    #colgap!(F.layout, 1, gapsize) #colgap!(fig.layout, 1, Relative(0.15))
+    #colgap!(F.layout, 2, gapsize)
+    #colgap!(F.layout, 3, gapsize)
+    #rowgap!(F.layout, 1, gapsize)
+    #rowgap!(F.layout, 2, gapsize)
+    #rowgap!(F.layout, 3, gapsize)
+
+    return F
+end
+
+function large_mode_figure(savedirname)
+    F = Figure(resolution=(2400,1000))
+
+    ga = F[1:12, 1:8] = GridLayout()
+    gb = F[1:12, 9:16] = GridLayout()
+    gc = F[1:12, 17:24] = GridLayout()
+    
+    gl1 = F[1,0] = GridLayout()
+    gl2 = F[2,0] = GridLayout()
+    gl3 = F[7,0] = GridLayout()
+
+    gt1 = F[0,2] = GridLayout()
+    gt2 = F[0,10] = GridLayout()
+    gt3 = F[0,18] = GridLayout()
+
+
+    #measurement
+    p = local_parameters(W,16,17,N,startyear)
+    mode_figure(ga,p,"GPP")
+
+    #resolved
+    p = local_parameters(W,9,10,N,startyear)
+    mode_figure(gb,p,"GPP")
+    
+    #unresolved
+    p = local_parameters(W,7,3,N,startyear)
+    mode_figure(gc,p,"GPP")
+
+    bigfs = 26
+    label1 = "signal and\n reconstruction"
+    label2 = "relative power"
+    label3 = "individual modes"
+
+    title1 = "(a) measurement TS IT-Lav ENF"
+    title2 = "(b) resolved NEE DE-Tha ENF"
+    title3 = "(c) unresolved RECO CH-Dav ENF"
+
+    for (label, layout) in zip([title1,title2,title3], [gt1,gt2,gt3])
+        Label(layout[1, 1], label,
+            fontsize = bigfs,
+            font = :bold,
+            #padding = (0, 5, 5, 0),
+            #halign = :right
+            )
+    end
+
+    for (label, layout) in zip([label1, label2, label3], [gl1, gl2, gl3])
+        Label(layout[1, 1,], label,
+            fontsize = bigfs,
+            font = :bold,
+            #padding = (0, 5, 5, 0),
+            #halign = :right,
+            #valign = :bottom,
+            rotation=pi/2)
+    end
+
+    for g in [ga, gb, gc]
+        g.alignmode = Mixed(right = 0,top=0,bottom=0,left=0)
+    end
+
+    for g in [gt1,gt2,gt3, gl1,gl2,gl3]
+        colgap!(g, 0)
+        rowgap!(g, 0)
+        g.alignmode = Mixed(right = 0,top=0,bottom=0,left=0)
+    end
+
+    save(dir*savedirname*".png",F)
+end
+
+"""
+outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass6/"
+large_mode_figure("examples_lowpass6a")
+
+outdir = "/net/scratch/lschulz/fluxfullset_midwithnee/"
+large_mode_figure("examples_unfiltered")
+"""
+
+Legend(F[1,4],
+#[lin, sca, [lin, sca], sca2],
+#["a line", "some dots", "both together", "rect markers"])
+[[signal_l,signal_s],ssa_l,nlsa_l],
+["signal","SSA","NLSA"],
+"$(spotslist[spot])\n$(igbpclass)",
+framevisible = false,
+labelsize = fs,
+titlesize=fs+4,
+#titlehalign = :left,
+#titlevalign = :bottom,
+#titleposition = :left,
+)
+
+"""
+combined heatmap
+"""
+
+#this doesnt work inside function scope, needs to be performed globally
+function gather_trends()
+    outdir = "/net/scratch/lschulz/fluxfullset_midwithnee/"
+    tensors_raw = create_trend_tensors(N,W)
+
+    outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass3/"
+    tensors_3 = create_trend_tensors(N,W)
+
+    outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"
+    tensors_4 = create_trend_tensors(N,W)
+
+    outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass6/"
+    tensors_6 = create_trend_tensors(N,W)
+
+    jldsave(dir*"trend_tensors.jld2",
+    tensors_raw = tensors_raw,
+    tensors_3 = tensors_3,
+    tensors_4 = tensors_4,
+    tensors_6 = tensors_6
+    )
+end
+
+function combined_heatmap()
+    #ssa_h,nlsa_h,ssa_trends,nlsa_trends inside the tensors
+    trends = load(dir*"trend_tensors.jld2")
+    tensors_raw = trends["tensors_raw"]
+    tensors_3 = trends["tensors_3"]
+    tensors_4 = trends["tensors_4"]
+    tensors_6 = trends["tensors_6"]
+
+
+    F = Figure(resolution = (800,1200))
+    
+    g_a = F[1:3,1:10] = GridLayout()
+    g_b = F[1:3,11:20] = GridLayout()
+    g_c = F[4:6,1:10] = GridLayout()
+    g_d = F[4:6,11:20] = GridLayout()
+    g_e = F[7:9,1:10] = GridLayout()
+    g_f = F[7:9,11:20] = GridLayout()
+    g_g = F[10:12,1:10] = GridLayout()
+    g_h = F[10:12,11:20] = GridLayout()
+
+    g_cbar = F[0,1:20] = GridLayout()
+
+    g_lab_1 = F[2,0] = GridLayout()
+    g_lab_2 = F[5,0] = GridLayout()
+    g_lab_3 = F[8,0] = GridLayout()
+    g_lab_4 = F[11,0] = GridLayout()
+
+    highclip = 8
+    fs = 20
+    fs_plot = 16
+
+
+    function plot_heatmap(g,data)
+
+        data = data[spots_list,vari_list]
+
+        data[data .< 2] .= NaN
+
+        x = 1:size(data,1)
+        y = 1:size(data,2)
+
+        ax,hm = heatmap(g[1,1],x,y,data,
+            colormap = cgrad(:heat, highclip, categorical = true),
+            colorrange = (1,highclip),
+            highclip = :red,
+            lowclip = :white,
+            #colorrange = (minimum(valuetable),maximum(valuetable)),
+            #aspect_ratio = 1,
+            grid = true,
+            framevisible = false,
+            axis = (
+                xticks = (1:length(spotslist),spotslist.*" ".*IGBP_list),
+                xticklabelrotation = pi/2,
+                #xlabel="site",
+                #ylabel = "variable",
+                xlabelsize = fs,
+                xticklabelsize = fs-4,
+                yticks = (1:length(variables_names),variables_names),
+                yticklabelsize = fs-4,
+                ylabelsize = fs,
+                #title = "SSA",
+                #titlesize = fs,
+            ))
+
+        for i in 1:size(data)[1]
+            str = data[i,:]
+            map(enumerate(str)) do (j, c)
+                if !isnan(c)
+                    text!(ax,i,j,text="$(Int(c))",
+                    align = (:center,:center),
+                    color = :black,fontsize=fs_plot,
+                    )
+                end
+
+            end
+        end
+
+        hidespines!(ax, :t,:r)
+        return ax,hm
+
+    end
+
+    function select_variables()
+
+        variables_names = ["GPP_DAY_1","GPP_DAY_2","GPP_NIGHT_1","GPP_NIGHT_2",
+        "RECO_DAY_1","RECO_DAY_2","RECO_NIGHT_1","RECO_NIGHT_2",
+        "NEE","NEE_NIGHT","NEE_DAY",
+        "TA","SW_IN","LW_IN","SWC","TS"]
+
+        #medium length
+        spotslist = [
+            "BE-Lon",
+            "BE-Vie",
+            "CH-Dav",
+            "CH-Fru",
+            "CH-Lae",
+            "CH-Oe2",
+            "DE-Geb",
+            "DE-Gri",
+            "DE-Hai",
+            "DE-Tha",
+            "DK-Sor",
+            "ES-LJu",
+            "FI-Hyy",
+            "FR-Aur",
+            "FR-Lam",
+            "IT-BCi",
+            "IT-Lav",
+            "RU-Fyo",
+        ]
+
+        IGBP_list = [
+            "CRO",
+            "MF",
+            "ENF",
+            "GRA",
+            "MF",
+            "CRO",
+            "CRO",
+            "GRA",
+            "DBF",
+            "ENF",
+            "DBF",
+            "OSH",
+            "ENF",
+            "CRO",
+            "CRO",
+            "CRO",
+            "ENF",
+            "ENF",
+        ]
+        
+        forest_list,grass_list = mask_IGBP(IGBP_list)
+        spots_list = forest_list
+        spotslist = spotslist[spots_list]
+        IGBP_list = IGBP_list[forest_list]
+        vari_list,variables_names = mask_vari(variables_names)
+
+        return spots_list,spotslist,IGBP_list,vari_list,variables_names
+    end
+
+    spots_list,spotslist,IGBP_list,vari_list,variables_names = select_variables()
+
+    ax_a,hm_a = plot_heatmap(g_a,tensors_raw[1])
+    ax_b,hm_b = plot_heatmap(g_b,tensors_raw[2])
+    ax_c,hm_c = plot_heatmap(g_c,tensors_6[1])
+    ax_d,hm_d = plot_heatmap(g_d,tensors_6[2])
+    ax_e,hm_e = plot_heatmap(g_e,tensors_4[1])
+    ax_f,hm_f = plot_heatmap(g_f,tensors_4[2])
+    ax_g,hm_g = plot_heatmap(g_g,tensors_3[1])
+    ax_h,hm_h = plot_heatmap(g_h,tensors_3[2])
+
+    #on the right, top3
+    for ax in [ax_b,ax_d,ax_f]
+        hidedecorations!(ax,grid = false,ticks=false)
+    end
+
+    #on the left, top 3
+    for ax in [ax_a,ax_c,ax_e]
+        hidexdecorations!(ax,grid = false,ticks=false)
+    end
+
+    #bottom figures
+    hideydecorations!(ax_h,grid = false,ticks=false)
+
+    for g in [g_a,g_b,g_c,g_d,g_e,g_f,g_g,g_h,g_cbar,g_lab_1,g_lab_2,g_lab_3,g_lab_4]
+        colgap!(g, 0)
+        rowgap!(g, 0)
+        #g.alignmode = Mixed(right = 0,top=0,bottom=0,left=0)
+    end
+
+
+    Label(g_cbar[2,1],"SSA",
+        fontsize = fs,
+        font = :bold,
+        padding = (0, 5, 5, 0),
+        halign = :right)
+    Label(g_cbar[2,4],"NLSA",
+        fontsize = fs,
+        font = :bold,
+        padding = (0, 5, 5, 0),
+        halign = :right)
+
+    
+    side_labels = ["unfiltered","lowpass [6/a]","lowpass [4/a]","lowpass [3/a]"]
+    for (label,g) in zip(
+        side_labels,[g_lab_1,g_lab_2,g_lab_3,g_lab_4]
+        )
+        Label(g[1, 1], label,
+            fontsize = fs,
+            font = :bold,
+            rotation = pi/2,
+            #padding = (0, 5, 5, 0),
+            #halign = :right
+            )
+    end
+
+
+    Colorbar(g_cbar[1,1:6], hm_a, vertical = false,
+    #label = "Harmonics",labelsize = fs
+    )
+
+    subfigure_labels = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)"]
+    gs = [g_a,g_b,g_c,g_d,g_e,g_f,g_g,g_h]
+
+    for (label, layout) in zip(subfigure_labels,gs)
+        Label(layout[1, 1, TopLeft()], label,
+            fontsize = 26,
+            font = :bold,
+            padding = (0, 5, 5, 0),
+            halign = :right)
+    end
+
+    for g in [g_a,g_b,g_c,g_d,g_e,g_f,g_g,g_h]
+        rowsize!(g, 1, Fixed(200))
+
+    end
+
+    save(dir*"heatmaps.png",F)
 end

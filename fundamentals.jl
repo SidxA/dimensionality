@@ -1,7 +1,9 @@
 using Pkg
 
+try
 Pkg.activate("dimensionality_pkg")
-
+catch
+end
 using Dates
 using FileIO
 using JLD2
@@ -319,13 +321,20 @@ Lowpass filtering the signals : doing 7 for 7/a for now
 
 savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_raw.jld2"
 wholedata = SharedArray{Float32}(load(savedirname)["data"])
-wholedata_filtered = zeros(Float32,5114,18,16)
+wholedata_filtered = zeros(Float32,5114,18,16,3)
 for i in 1:18
     for j in 1:16
-        wholedata_filtered[:,i,j] = lowpass_filter(wholedata[:,i,j], 4)
+        wholedata_filtered[:,i,j,1] = lowpass_filter(wholedata[:,i,j], 3)
+        wholedata_filtered[:,i,j,2] = lowpass_filter(wholedata[:,i,j], 4)
+        wholedata_filtered[:,i,j,3] = lowpass_filter(wholedata[:,i,j], 6)
+
     end
 end
 
+jldsave("/net/scratch/lschulz/fluxdata_midwithnee/fluxdata_filtered.jld2",
+       data_3a=wholedata_filtered[:,:,:,1],
+       data_4a=wholedata_filtered[:,:,:,2],
+       data_6a=wholedata_filtered[:,:,:,3])
 """
 
 function lowpass_filter(signal::Vector{T}, cutoff_frequency) where T<:Real
