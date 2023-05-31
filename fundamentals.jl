@@ -49,7 +49,7 @@ function init_logging()
     return dir
 end
 
-dir = init_logging()
+
 
 # This function standardizes the input data by subtracting the mean and dividing by the standard deviation.
 
