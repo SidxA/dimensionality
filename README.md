@@ -17,6 +17,27 @@ For SSA, the code utilizes the PCA class from the MultivariateStats library to p
 For NLSA, the code utilizes the DiffusionMap class from the ManifoldLearning library. The approximated Laplace-Beltrami-operator is then computed.
 Its spectrum contains important properties of the underlying dynamical system, which can be used to identify the dominant modes of variability in the data.
 
+## Code
+
+### dimensionality reduction methods
+
+run `export JULIA_NUM_THREADS=1` in bash and start julia with desired number of cores to specify CPU usage
+the dimensionality reduction is performed 1 timeseries per core using the same W values to re-write the big matrices to save RAM
+each individual calculation outputs a SSA and NLSA jld2 file with the modes,etc. inside
+main ingredients contained in
+`fundamentals.jl`
+just run 
+`/opt/julia-1.8.5/bin/julia --threads 64 iterate_blockdata.jl` for using 64 cores
+with the specified parameters changed inside
+`savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_lowpass4.jld2"' the file containing the '[N,spots,variables]' different values
+this file contains 18 spots and 16 variables selected for beeing the longest measurement periods of the variables of interest
+'outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"' the directory getting created that the individual files are saved in
+`the`W` need to be specified in the parallel loop at the end of the document
+
+### analysis
+
+inside the `analysis.jl` file, individual functions perform the calculations and plotting the create the figures
+
 ## Conclusion
 
 One important property of both SSA and NLSA is that the reduced dimensions obtained from these methods are orthogonal to each other. This means that each dimension carries unique information about the dynamics of the system, with minimal redundancy between dimensions.
