@@ -25,6 +25,43 @@ variables_original_names = data["variables_original_names"]  # fluxnet variable 
 flags = data["flags"]  # quality flags
 flag_variables = data["flag_variables"]  # names of the variables the quality flags are for
 
+#indices and names of main variables: ["GPP","RECO","NEE","SW_IN","TS","SWC"]
+function mask_vari(variables_names)
+    x = Int64[]  # Initialize an empty array to store the indices of the desired variables
+
+    # Find the indices of specific variable names and append them to the array x
+    x = append!(x, findall(x -> x == "GPP_DAY_1", variables_names))
+    x = append!(x, findall(x -> x == "RECO_NIGHT_1", variables_names))
+    x = append!(x, findall(x -> x == "NEE", variables_names))
+    x = append!(x, findall(x -> x == "SW_IN", variables_names))
+    x = append!(x, findall(x -> x == "TS", variables_names))
+    x = append!(x, findall(x -> x == "SWC", variables_names))
+
+    return x, ["GPP", "RECO", "NEE", "SW_IN", "TS", "SWC"]  # Return the array of indices and a new list of abbreviated variable names
+end
+
+
+#indices of main spots that are of forest ecosystem ([1]) and grass ecosystem ([2])
+function mask_IGBP(IGBP_list)
+    enf = findall(x -> x == "ENF", IGBP_list)  # Find the indices of "ENF" category in the IGBP_list
+    mf = findall(x -> x == "MF", IGBP_list)  # Find the indices of "MF" 
+    dbf = findall(x -> x == "DBF", IGBP_list)  # Find the indices of "DBF" 
+    shr = findall(x -> x == "SHR", IGBP_list)  # Find the indices of "SHR" 
+    cro = findall(x -> x == "CRO", IGBP_list)  # Find the indices of "CRO" 
+    gra = findall(x -> x == "GRA", IGBP_list)  # Find the indices of "GRA" 
+    osh = findall(x -> x == "OSH", IGBP_list)  # Find the indices of "OSH" 
+
+    forest = append!(enf, mf, dbf)  # Combine the indices of forest categories into the forest array
+    grass = append!(shr, gra, osh, cro)  # Combine the indices of grassland categories into the grass array
+
+    return forest, grass  # Return the arrays of indices corresponding to forest and grass categories
+end
+
+
+#clumsy coordinate trafo for indices
+spots = mask_IGBP(IGBP_list)[1]
+vars,varnames = mask_vari(variables_names)
+IGBP_reduced = IGBP_list[spots]
 
 function create_trend_tensors(N, W)
     # Initialize output matrices with zeros
@@ -92,10 +129,10 @@ function regularity(signal)
     return spec_signal[flist], sum(spec_signal[freqend:end])
 end
 
-function long_deviation(vec)
+function long_deviation(vec) #with a/2
     st = std(vec)
     me = mean(vec)
-    window_length = 120
+    window_length = 182
 
     # Embed the lagged vector in a matrix
     Ar = embed_lag(Float32.(vec), window_length)
@@ -211,14 +248,13 @@ end
 #required for sample entropy
 function rle_encode(match_matrix)
     N = size(match_matrix, 1)
-    # Initialize an array to store the encoded values
     encoded = Vector{Int}(undef, N)
     for i in 1:N
-        # Count the number of matches in each row of the match matrix
-        encoded[i] = sum(match_matrix[i, i + 1:N + 1])
+        encoded[i] = sum(match_matrix[i, i+1:end])
     end
     return encoded
 end
+
 
 #sample entropy
 function sampen3(L)
@@ -279,10 +315,11 @@ function create_data_characteristics()
     entropies = [raw_entropy[spots, vars], f3_entropy[spots, vars], f4_entropy[spots, vars], f6_entropy[spots, vars]]
 
     # Scale the noise, harmonic, and entropy values using projection binning
-    noises_scaled = projection_binning_inter(noises)
+    noises_scaled = projection_binning_intra(noises)
     harms_scaled = projection_binning_inter(harms)
     entropies_scaled = projection_binning_inter(entropies)
 
+    artifacts = [long_deviation(flags[:,i,j]) for i = spots, j = [6,7,5,2,9,8]]
     # Save the computed data characteristics to a file
     jldsave("/net/scratch/lschulz/data/data_characteristics.jld2",
         f3_harm_p = f3_harm_p,

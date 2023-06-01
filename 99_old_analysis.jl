@@ -3967,7 +3967,7 @@ function all_the tensorz()
     function long_deviation(vec)
         st = std(vec)
         me = mean(vec)
-        window_length = 120
+        window_length = 182
         Ar = embed_lag(Float32.(vec),window_length)
         for i in 1:size(Ar)[2]
             win = Ar[:,i]
