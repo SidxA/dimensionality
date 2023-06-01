@@ -4,90 +4,65 @@ This README provides an overview of the content in each of the Julia files inclu
 
 ## 01_basic_functionality.jl
 
-This file contains the implementation of basic functionality in Julia. It includes essential functions and utilities that serve as the foundation for other scripts in this project.
+- includes essential functions and utilities that serve as the foundation for other scripts in this project
 
 ## 02_dimensionreduction_structs.jl
 
-The `02_dimensionreduction_structs.jl` file defines custom data structures and types required for dimension reduction algorithms. It provides the necessary abstractions and data representations for efficient data processing and analysis.
+- defines custom data structures and types required for dimension reduction algorithms
+- provides the necessary abstractions and data representations for efficient data processing and analysis
 
 ## 03_data_preprocessing.jl
 
-The `03_data_preprocessing.jl` file focuses on data preprocessing techniques. It contains functions for cleaning, transforming, and normalizing raw data before it is used in subsequent analysis steps.
+- focuses on data preprocessing techniques
+- lowpass filter at different frequencies
 
 ## 04_RUN_dimensionreduction.jl
 
-In the `04_RUN_dimensionreduction.jl` file, you will find the main script for executing dimension reduction algorithms. It combines the functionality from previous files and performs dimensionality reduction on the input data, generating reduced-dimensional representations.
-
-## 05_processing.jl
-
-The `05_processing.jl` file contains additional data processing routines that are applied after dimension reduction. This includes feature extraction, outlier detection, or other post-processing steps that are specific to the project's requirements.
-
-## 06_load_figuredata.jl
-
-The `06_load_figuredata.jl` file focuses on loading and preparing data specifically required for generating figures or visualizations. It handles data loading, preprocessing, and formatting to facilitate the creation of informative and visually appealing figures.
-
-## 07_fig1_motivation.jl
-
-In the `07_fig1_motivation.jl` file, you will find the code for generating Figure 1. This figure illustrates the motivation or background information related to the project. It may include visualizations, charts, or other graphical representations.
-
-## 08_fig2_results.jl
-
-The `08_fig2_results.jl` file contains the code for generating Figure 2. This figure presents the results of the analysis performed in the project. It may visualize the performance, accuracy, or any other relevant metrics related to the dimension reduction algorithms.
-
-## 09_fig3_heatmaps.jl
-
-The `09_fig3_heatmaps.jl` file includes the code for generating Figure 3. This figure focuses on presenting heatmaps or similar visualizations, showcasing specific patterns, distributions, or correlations discovered during the analysis.
-
-## 99_old_analysis.jl
-
-The `99_old_analysis.jl` file contains old or deprecated code that was used in previous iterations of the project. It is kept for historical purposes but is no longer actively used in the current implementation.
-
-Please refer to the individual Julia files for more detailed comments and code explanations.
-
-
-# data
-
-- time series main information loading by `load("/net/scratch/lschulz/data/time_series.jld2")`, holding
-    - `data_raw, data_f3, data_f4, data_f6` raw and lowpass-filtered time series
-    - `flags` quality flags for selected variables
-    - `flag_variables` variables for wjhich the flags are selected
-    - `spotslist` 18 fluxnet description names marking the measurement sites
-    - `IGBP_list` corresponding 18 classified ecosystems
-    - `variables_names` chosen names for the 16 selected variables
-    - `variables_original_names` original fluxnet variable names
-- the main analysis of the individual time series is performed using the `local_parameters` function that returns a dirty list of the extracted variables of interest
-- the computed seasonal cycles are loaded by `load("/net/scratch/lschulz/data/seasonal_cycle.jld2")`, holding
-    - `ssa_h_x` : 18x16 matrix of retrieved number of harmonics for SSA
-    - `nlsa_h_x` : 18x16 matrix of retrieved number of harmonics for NLSA
-    - `ssa_trends_x` : Nx18x16 tensor of the calculated seasonal cycles for SSA
-    - `nlsa_trends_x` : Nx18x16 tensor of the calculated seasonal cycles for NLSA
-- with `x` out of `[raw,3,4,6]` for the corresponding (un)-filtered time series
-- 
-# dimensionality reduction methods
-
+- main script for executing dimension reduction algorithms
 - run `export JULIA_NUM_THREADS=1` in bash and start julia with desired number of cores to specify CPU usage
 - the dimensionality reduction is performed 1 timeseries per core using the same W values to re-write the big matrices to save RAM
-- each individual calculation outputs a SSA and NLSA jld2 file with the modes,etc. inside
-- main ingredients contained in `fundamentals.jl`
-- just run `/opt/julia-1.9.0/bin/julia --threads 64 iterate_blockdata.jl` for using 64 cores
+- each individual calculation outputs a SSA and NLSA jld2 file with the modes,etc. inside into the specified `outdir`
+- just run `/opt/julia-1.9.0/bin/julia --threads 64 04_RUN_dimensionreduction.jl` for using 64 cores
 - with the specified parameters changed inside
   - `savedirname = "/net/scratch/lschulz/data/time_series.jld2"` the file containing the `[N,spots,variables]` different values for different filters
   - `wholedata = SharedArray{Float32}(load(savedirname)["data_x"])`with `x` in `[raw,f3,f4,f6]` for corresponding dataset
   - this file contains 18 spots and 16 variables selected for beeing the longest measurement periods of the variables of interest
-  - `outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"` the directory getting created that the individual files are saved in
-  - `the desired different `W` need to be specified in the list at the parallel loop at the end of the document: thsi is run at 7
+  - the desired different `W` need to be specified in the list at the parallel loop at the end of the document: this is run at 7 a
 
-# analysis
+## 05_processing.jl
 
-- inside the `analysis.jl` file, individual functions perform the calculations and plotting the create the figures
+- contains data processing routines, applied after dimension reduction
+- includes feature extraction, seasonal cycle 
+
+## 06_load_figuredata.jl
+
+- loading and preparing data for generating figures
 - it is important if julia is run externally to run it by `GKSwstype=nul /opt/julia-1.9.0/bin/julia` in order to prevent it from trying to display images directly
-- the created figures can be saved into specified directory `dir` and looked at there
-- for submission change julia Makie fonts by `set_theme!(fonts=(
-    regular="Latin Modern Roman",
-    bold = "Latin Modern Roman Bold",
-    italic = "Latin Modern Roman Italic",
-    bold_italic = "Latin Modern Roman Bold Italic",))`
+- 
+## 07_fig1_motivation.jl
 
+- code for generating Figure 1
+- illustrates the motivation and background information: need for higher harmonic terms then the fundamental in order to resolve complex climatic time-series
+
+## 08_fig2_results.jl
+
+- contains the code for generating Figure 2
+- 3 examples of dimension reduction to extract the seasonal cycle in different spots and with different vegetation related flux data
+- `mode_figure_flags` builds individual overview panel with timeseries (with quality flags), spectrum, mode shapes, mode spectral content
+    - e.g.
+`spot = 2
+vari = 2
+F = Figure()
+p = local_parameters(spots[spot],vars[vari],outdir)
+mode_figure_flags(F,p,"test",flags[:,spot,vari],data_tensor)
+save(savedirname,F)`
+- `large_mode_figure_flags` combines 3 selected examples into a large figure
+
+## 09_fig3_heatmaps.jl
+
+- includes the code for generating Figure 3
+- `heatmap_numbers` produces heatmap with numbers, focused solely on differences in extracted number of harmonics between different noise filters
+- `characterization_heatmap` also includes little symbolls for noise content, signal sinusoidality, signal entropy (NN sample entropy) and quality flag artefacts
 
 # Theory
 
