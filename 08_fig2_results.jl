@@ -1,6 +1,20 @@
+include("/net/home/lschulz/dimensionality/06_load_figuredata.jl")
+
 """
 the following figures are built using the reduced number of spots and variables
 """
+
+# choose an unfiltered time series
+data_tensor = data_raw
+outdir = outdir_raw
+
+#choose a filtered time series
+#data_tensor = data_filtered
+#outdir = outdir_filtered
+
+#data saving directory
+dir = init_logging()
+savedirname = dir * "test.png"
 
 
 #individual overview plot showing the time series, the spectrum, the modes and the spectra of the modes
@@ -189,6 +203,8 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
 
     return F
 end
+
+
 
 function large_mode_figure_flags(savedirname,data_tensor,outdir)
     F = Figure(resolution=(2400,1000))

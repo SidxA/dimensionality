@@ -1,9 +1,11 @@
 using Pkg
 
+#some weird error with datetime format, no time to set up new environment
 try
 Pkg.activate("dimensionality_pkg")
 catch
 end
+
 using Dates
 using FileIO
 using JLD2

@@ -1,9 +1,4 @@
 
-
-"""
-the calculation
-"""
-
 mutable struct matrixholder
     #requirements for function that puts in data
     N           ::Int64    # Number of data points

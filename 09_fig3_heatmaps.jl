@@ -1,3 +1,11 @@
+include("/net/home/lschulz/dimensionality/06_load_figuredata.jl")
+
+
+#data saving directory
+dir = init_logging()
+savedirname = dir * "test.png"
+
+
 #heatmap
 function heatmap_numbers(savedirname)
 

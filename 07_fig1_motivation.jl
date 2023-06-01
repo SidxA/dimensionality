@@ -1,11 +1,21 @@
+include("/net/home/lschulz/dimensionality/06_load_figuredata.jl")
+
+# choose an unfiltered time series
+data_tensor = data_raw
+outdir = outdir_raw
+
+#data saving directory
+dir = init_logging()
+savedirname = dir * "test.png"
+
 # Function to create a motivation plot
-function motivation_plot(savedirname, outdir)
+function motivation_plot(savedirname, data_tensor,outdir)
     # Set spot and variable indices
     spot = 9
     vari = 9
 
     # Local parameters calculation
-    p = local_parameters(spot, vari, data_tensor, outdir)
+    p = local_parameters(spot, vari, outdir)
 
     # Function to compute individual harmonics
     function individual_harmonics(p, rescale = false)
@@ -41,8 +51,8 @@ function motivation_plot(savedirname, outdir)
     spot, W, vari, years, varname, igbpclass, freq_domain_N, freq_domain_w, freqs_w, freqs, signal, ssa_Eof, nlsa_Eof, nlsa_eps, ssa_rec, nlsa_rec, ssa_cap_var, nlsa_cap_var, spec_signal, spec_ssa_rc, spec_nlsa_rc, spec_ssa_eof, spec_nlsa_eof, gaussian_ssa, gaussian_nlsa, li_harmonics_ssa, li_harmonics_nlsa, ssa_trend_harm, nlsa_trend_harm, freq_ssa, freq_nlsa, ssa_harm_var, nlsa_harm_var, spec_ssa, spec_res_ssa, spec_nlsa, spec_res_nlsa = p
     
     # Compute mean and standard deviation of raw data
-    m = mean(data_raw[:, spot, vari])
-    s = std(data_raw[:, spot, vari])
+    m = mean(data_tensor[:, spot, vari])
+    s = std(data_tensor[:, spot, vari])
 
     # Compute fundamental components
     ssa_fund = back_trafo(sum(ssa_trend_rc[:, 1:2], dims=2)[:], m, s)

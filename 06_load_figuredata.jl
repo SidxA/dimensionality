@@ -49,7 +49,10 @@ flag_variables = data["flag_variables"]  # names of the variables the quality fl
 
 
 #individual dimension-reduction results
-outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"
+outdir_raw = "/net/scratch/lschulz/data/dimensionreduction/raw/"
+outdir_f3 = "/net/scratch/lschulz/data/dimensionreduction/lowpass3/"
+outdir_f4 = "/net/scratch/lschulz/data/dimensionreduction/lowpass4/"
+outdir_f6 = "/net/scratch/lschulz/data/dimensionreduction/lowpass6/"
 
 """
 the chosen outdir needs to match the data_tensor choice in the functions!
@@ -253,8 +256,8 @@ function local_parameters(spot,vari,outdir)
 
     #read in ssa nlsa results
     # Create the filenames for loading the results
-    Filename_ssa = outdir * join(["ssa", W, spot, vari, preproc], "_") * ".jld2"  # Filename for SSA results
-    Filename_nlsa = outdir * join(["diff", W, spot, vari, preproc], "_") * ".jld2"  # Filename for NLSA results
+    Filename_ssa = outdir * join(["ssa", W, spot, vari, preproc], "_") * "jld2"  # Filename for SSA results
+    Filename_nlsa = outdir * join(["diff", W, spot, vari, preproc], "_") * "jld2"  # Filename for NLSA results
 
     # Load the SSA and NLSA result files
     file_ssa = load(Filename_ssa)  # Load the SSA result file

@@ -1,4 +1,5 @@
 include("/net/home/lschulz/dimensionality/01_basic_functionality.jl")
+
 #global parameters
 W = 2556
 N = 5114

@@ -1,9 +1,9 @@
 """
 export JULIA_NUM_THREADS=1
-GKSwstype=nul /opt/julia-1.8.5/bin/julia --threads 64 iterate_blockdata.jl 
+GKSwstype=nul /opt/julia-1.9.0/bin/julia --threads 64 iterate_blockdata.jl 
 """
 
-include("/net/home/lschulz/dimensionality/fundamentals.jl")
+include("/net/home/lschulz/dimensionality/01_basic_functionality.jl")
 
 
 #big parameters
@@ -14,8 +14,12 @@ running raw at the moment
 """
 
 #fluxnetfullset
-savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/fluxdata_lowpass4.jld2"
-wholedata = SharedArray{Float32}(load(savedirname)["data"])
+savedirname = "/net/scratch/lschulz/data/time_series.jld2"
+#choose data: unfiltered, 3a,4a,6a lowpass filters
+wholedata = SharedArray{Float32}(load(savedirname)["data_raw"])
+#woledata = SharedArray{Float32}(load(savedirname)["data_3a"])
+#wholedata = SharedArray{Float32}(load(savedirname)["data_4a"])
+#wholedata = SharedArray{Float32}(load(savedirname)["data_6a"])
 
 # Retrieve the dimensions of the loaded data
 N, spots, vars = size(wholedata)
@@ -24,7 +28,7 @@ N, spots, vars = size(wholedata)
 """
 OUTDIR NEEDS TO HAVE /
 """
-outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"
+outdir = "/net/scratch/lschulz/data/dimensionreduction/raw/"
 
 """
 put EVERYTHING variable TO KNOW in the package
