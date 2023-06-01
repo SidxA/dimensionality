@@ -50,11 +50,11 @@ This README provides an overview of the content in each of the Julia files inclu
 - 3 examples of dimension reduction to extract the seasonal cycle in different spots and with different vegetation related flux data
 - `mode_figure_flags` builds individual overview panel with timeseries (with quality flags), spectrum, mode shapes, mode spectral content
     - e.g.
-`spot = 2
-vari = 2
-F = Figure()
-p = local_parameters(spots[spot],vars[vari],outdir)
-mode_figure_flags(F,p,"test",flags[:,spot,vari],data_tensor)
+`spot = 2  
+vari = 2  
+F = Figure()  
+p = local_parameters(spots[spot],vars[vari],outdir)  
+mode_figure_flags(F,p,"test",flags[:,spot,vari],data_tensor)  
 save(savedirname,F)`
 - `large_mode_figure_flags` combines 3 selected examples into a large figure
 
