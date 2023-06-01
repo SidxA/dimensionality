@@ -4012,7 +4012,7 @@ function all_the tensorz()
     function projection_binning_intra(matrices)
         function doit(matrix)
             n_spots,n_varis = size(matrix)
-            bins = 5
+            bins = 3
             maxi = maximum(matrix) *1.01
             mini = minimum(matrix)
             binsize = (maxi-mini)/bins
@@ -4034,7 +4034,7 @@ function all_the tensorz()
     function projection_binning_inter(matrices)
         n_spots,n_varis = size(matrices[1])
         n_matrices=size(matrices)[1]
-        bins = 5
+        bins = 3
         maxi = maximum(maximum.(matrices)) *1.01
         mini = minimum(minimum.(matrices))
         binsize = (maxi-mini)/bins
@@ -4056,22 +4056,22 @@ function all_the tensorz()
 
     savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/fluxdata_filtered.jld2"
     wholedata_f4 = SharedArray{Float32}(load(savedirname)["data_4a"])
-    #f4_harm_p,f4_noise_p = tensor_based_analytics(wholedata)
+    f4_harm_p,f4_noise_p = tensor_based_analytics(wholedata)
     wholedata_f3 = SharedArray{Float32}(load(savedirname)["data_3a"])
-    #f3_harm_p,f3_noise_p = tensor_based_analytics(wholedata)
+    f3_harm_p,f3_noise_p = tensor_based_analytics(wholedata)
     wholedata_f6 = SharedArray{Float32}(load(savedirname)["data_6a"])
-    #f6_harm_p,f6_noise_p = tensor_based_analytics(wholedata)
+    f6_harm_p,f6_noise_p = tensor_based_analytics(wholedata)
 
     flags = load("/net/scratch/lschulz/QF/qualityflags.jld2")["flags"]
     flags[flags .< 0] .= 0
     flags[flags .> 1] .= 1
     lo = [long_deviation(flags[:,i,j]) for i = 1:18,j = 1:9]
-    lo[spots,[6,7,5,2,9,8]]
+    #lo[spots,[6,7,5,2,9,8]]
 
     noises = [raw_noise_p[spots,vars],f3_noise_p[spots,vars],f4_noise_p[spots,vars],f6_noise_p[spots,vars]]
     harms = [raw_harm_p[spots,vars],f3_harm_p[spots,vars],f4_harm_p[spots,vars],f6_harm_p[spots,vars]]
-    noises_scaled = projection_binning_intra(noises)
-    harms_scaled = projection_binning_intra(harms)
+    noises_scaled = projection_binning_inter(noises)
+    harms_scaled = projection_binning_inter(harms)
 
     jldsave(dir*"intra_tensor_based_analytics.jld2",
         raw_harm_p = harms_scaled[1],
@@ -4084,6 +4084,125 @@ function all_the tensorz()
         f6_noise_p = noises_scaled[4],
         lo = lo[spots,[6,7,5,2,9,8]],
     )
+
+
+    raw_entropy = [sampen3(data_raw[:,i,j]) for i = 1:18,j = 1:16]
+    f3_entropy = [sampen3(data_f3[:,i,j]) for i = 1:18,j = 1:16]
+    f4_entropy = [sampen3(data_f4[:,i,j]) for i = 1:18,j = 1:16]
+    f6_entropy = [sampen3(data_f6[:,i,j]) for i = 1:18,j = 1:16]
+    
+    
+    
+    data = load("/net/scratch/lschulz/data/time_series.jld2")
+    data_raw = data["data_raw"]
+    data_f3 = data["data_f3" ]
+    data_f4 = data["data_f4"]
+    data_f6 = data["data_f6"]
+
+    raw_harm_p,raw_noise_p = tensor_based_analytics(data_raw)
+
+    f4_harm_p,f4_noise_p = tensor_based_analytics(data_f4)
+
+    f3_harm_p,f3_noise_p = tensor_based_analytics(data_f3)
+
+    f6_harm_p,f6_noise_p = tensor_based_analytics(data_f6)
+
+    noises = [raw_noise_p[spots,vars],f3_noise_p[spots,vars],f4_noise_p[spots,vars],f6_noise_p[spots,vars]]
+    harms = [raw_harm_p[spots,vars],f3_harm_p[spots,vars],f4_harm_p[spots,vars],f6_harm_p[spots,vars]]
+    entropies = [raw_entropy[spots,vars],f3_entropy[spots,vars],f4_entropy[spots,vars],f6_entropy[spots,vars]]
+    noises_scaled = projection_binning_inter(noises)
+    harms_scaled = projection_binning_inter(harms)
+    entropies_scaled = projection_binning_inter(entropies)
+
+    jldsave("/net/scratch/lschulz/data/data_characteristics.jld2",
+        f3_harm_p = f3_harm_p,
+        f4_harm_p = f4_harm_p,
+        f6_harm_p = f6_harm_p,
+        raw_harm_p = raw_harm_p,
+        f3_noise_p = f3_noise_p,
+        f4_noise_p = f4_noise_p,
+        f6_noise_p = f6_noise_p,
+        raw_noise_p = raw_noise_p,
+        raw_entropy = raw_entropy,
+        f3_entropy = f3_entropy,
+        f4_entropy = f4_entropy,
+        f6_entropy = f6_entropy,
+        raw_harm_p_scaled = harms_scaled[1],
+        f3_harm_p_scaled = harms_scaled[2],
+        f4_harm_p_scaled = harms_scaled[3],
+        f6_harm_p_scaled = harms_scaled[4],
+        raw_noise_p_scaled = noises_scaled[1],
+        f3_noise_p_scaled = noises_scaled[2],
+        f4_noise_p_scaled = noises_scaled[3],
+        f6_noise_p_scaled = noises_scaled[4],
+        raw_entropy_scaled = entropies_scaled[1],
+        f3_entropy_scaled = entropies_scaled[2],
+        f4_entropy_scaled = entropies_scaled[3],
+        f6_entropy_scaled = entropies_scaled[4],
+        artifacts = artifacts,
+    )
+
+    function rle_encode(match_matrix)
+        N = size(match_matrix, 1)
+        encoded = Vector{Int}(undef, N)
+        for i in 1:N
+            encoded[i] = sum(match_matrix[i, i+1:end])
+        end
+        return encoded
+    end
+
+    function calculate_match_matrix(L, m, r)
+        N = length(L)
+        match_matrix = falses(N - m + 1, N - m + 1)
+        for i in 1:N - m
+            for j in i + 1:N - m + 1
+                if abs(L[i] - L[j]) ≤ r
+                    match_matrix[i, j] = true
+                else
+                    break
+                end
+            end
+        end
+        return match_matrix
+    end
+    
+    function rle_encode(match_matrix)
+        N = size(match_matrix, 1)
+        encoded = Vector{Int}(undef, N)
+        for i in 1:N
+            encoded[i] = sum(match_matrix[i, i + 1:N + 1])
+        end
+        return encoded
+    end
+    
+    function sampen3(L)
+        m = 2
+        r = 2 * std(L)
+        N = length(L)
+        B = 0
+        A = 0
+    
+        # Calculate distance matrix for B
+        match_matrix_B = calculate_match_matrix(L, m, r)
+        encoded_B = rle_encode(match_matrix_B)
+        B = sum(encoded_B)
+    
+        # Calculate distance matrix for A
+        m += 1
+        match_matrix_A = calculate_match_matrix(L, m, r)
+        encoded_A = rle_encode(match_matrix_A)
+        A = sum(encoded_A)
+    
+        # Handle division by zero
+        if A == 0 || B == 0
+            return NaN
+        end
+    
+        # Return SampEn
+        return -log(A / B)
+    end
+
+    
 end
 
 """
@@ -4454,21 +4573,43 @@ function sampen3(L)
     A = 0
 
     # Calculate distance matrix for B
-    xmi = [L[i : i + m - 1] for i in 1:N - m + 1]
-    diff_matrix_B = [maximum(abs.(xmi[i] .- xmi[j])) for i in 1:N - m, j in i + 1:N - m + 1]
-    match_matrix_B = [diff ≤ r for diff in diff_matrix_B]
+    diff_matrix_B = []
+    for i in 1:N - m
+        xmi = L[i : i + m - 1]
+        diffs = []
+        for j in i + 1:N - m + 1
+            xmj = L[j : j + m - 1]
+            diffs = [maximum(abs.(xmi .- xmj))]
+        end
+        diff_matrix_B = [diff_matrix_B; diffs]
+    end
+    match_matrix_B = [all(diff .≤ r) for diff in diff_matrix_B]
     B = sum(match_matrix_B)
 
-    # Similar for computing A
+    # Calculate distance matrix for A
     m += 1
-    xm = [L[i : i + m - 1] for i in 1:N - m + 1]
-    diff_matrix_A = [maximum(abs.(xm[i] .- xm[j])) for i in 1:N - m + 1, j in i + 1:N - m + 1]
-    match_matrix_A = [diff ≤ r for diff in diff_matrix_A]
+    diff_matrix_A = []
+    for i in 1:N - m
+        xm = L[i : i + m - 1]
+        diffs = []
+        for j in i + 1:N - m + 1
+            xj = L[j : j + m - 1]
+            diffs = [maximum(abs.(xm .- xj))]
+        end
+        diff_matrix_A = [diff_matrix_A; diffs]
+    end
+    match_matrix_A = [all(diff .≤ r) for diff in diff_matrix_A]
     A = sum(match_matrix_A)
+
+    # Handle division by zero
+    if A == 0 || B == 0
+        return NaN
+    end
 
     # Return SampEn
     return -log(A / B)
 end
+
 
 
 """
