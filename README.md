@@ -19,25 +19,51 @@ Its spectrum contains important properties of the underlying dynamical system, w
 
 ## Code
 
+- the required libraries need to be installed
+
+### data
+
+- time series main information loading by `load("/net/scratch/lschulz/data/time_series.jld2")`, holding
+    - `data_raw, data_f3, data_f4, data_f6` raw and lowpass-filtered time series
+    - `flags` quality flags for selected variables
+    - `flag_variables` variables for wjhich the flags are selected
+    - `spotslist` 18 fluxnet description names marking the measurement sites
+    - `IGBP_list` corresponding 18 classified ecosystems
+    - `variables_names` chosen names for the 16 selected variables
+    - `variables_original_names` original fluxnet variable names
+- the main analysis of the individual time series is performed using the `local_parameters` function that returns a dirty list of the extracted variables of interest
+- the computed seasonal cycles are loaded by `load("/net/scratch/lschulz/data/seasonal_cycle.jld2")`, holding
+    - `ssa_h_x` : 18x16 matrix of retrieved number of harmonics for SSA
+    - `nlsa_h_x` : 18x16 matrix of retrieved number of harmonics for NLSA
+    - `ssa_trends_x` : Nx18x16 tensor of the calculated seasonal cycles for SSA
+    - `nlsa_trends_x` : Nx18x16 tensor of the calculated seasonal cycles for NLSA
+- with `x` out of `[raw,3,4,6]` for the corresponding (un)-filtered time series
+- 
 ### dimensionality reduction methods
 
-run `export JULIA_NUM_THREADS=1` in bash and start julia with desired number of cores to specify CPU usage
-the dimensionality reduction is performed 1 timeseries per core using the same W values to re-write the big matrices to save RAM
-each individual calculation outputs a SSA and NLSA jld2 file with the modes,etc. inside
-main ingredients contained in
-`fundamentals.jl`
-just run 
-`/opt/julia-1.8.5/bin/julia --threads 64 iterate_blockdata.jl` for using 64 cores
-with the specified parameters changed inside
-`savedirname = "/net/scratch/lschulz/fluxdata_midwithnee/"*"fluxdata_lowpass4.jld2"' the file containing the '[N,spots,variables]' different values
-this file contains 18 spots and 16 variables selected for beeing the longest measurement periods of the variables of interest
-'outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"' the directory getting created that the individual files are saved in
-`the`W` need to be specified in the parallel loop at the end of the document
+- run `export JULIA_NUM_THREADS=1` in bash and start julia with desired number of cores to specify CPU usage
+- the dimensionality reduction is performed 1 timeseries per core using the same W values to re-write the big matrices to save RAM
+- each individual calculation outputs a SSA and NLSA jld2 file with the modes,etc. inside
+- main ingredients contained in `fundamentals.jl`
+- just run `/opt/julia-1.9.0/bin/julia --threads 64 iterate_blockdata.jl` for using 64 cores
+- with the specified parameters changed inside
+  - `savedirname = "/net/scratch/lschulz/data/time_series.jld2"` the file containing the `[N,spots,variables]` different values for different filters
+  - `wholedata = SharedArray{Float32}(load(savedirname)["data_x"])`with `x` in `[raw,f3,f4,f6]` for corresponding dataset
+  - this file contains 18 spots and 16 variables selected for beeing the longest measurement periods of the variables of interest
+  - `outdir = "/net/scratch/lschulz/fluxfullset_midwithnee_lowpass4/"` the directory getting created that the individual files are saved in
+  - `the desired different `W` need to be specified in the list at the parallel loop at the end of the document: thsi is run at 7
 
 ### analysis
 
-inside the `analysis.jl` file, individual functions perform the calculations and plotting the create the figures
-
+- inside the `analysis.jl` file, individual functions perform the calculations and plotting the create the figures
+- it is important if julia is run externally to run it by `GKSwstype=nul /opt/julia-1.9.0/bin/julia` in order to prevent it from trying to display images directly
+- the created figures can be saved into specified directory `dir` and looked at there
+- for submission change julia Makie fonts by `set_theme!(fonts=(
+    regular="Latin Modern Roman",
+    bold = "Latin Modern Roman Bold",
+    italic = "Latin Modern Roman Italic",
+    bold_italic = "Latin Modern Roman Bold Italic",))`
+    
 ## Conclusion
 
 One important property of both SSA and NLSA is that the reduced dimensions obtained from these methods are orthogonal to each other. This means that each dimension carries unique information about the dynamics of the system, with minimal redundancy between dimensions.
