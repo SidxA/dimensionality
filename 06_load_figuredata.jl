@@ -78,37 +78,6 @@ nlsa_trends_4 = cycles["nlsa_trends_4"] #the seasonal cycle of the 4a lowpass fi
 nlsa_trends_6 = cycles["nlsa_trends_6"] #the seasonal cycle of the 6a lowpass filtered data by NLSA
 
 
-#indices and names of main variables: ["GPP","RECO","NEE","SW_IN","TS","SWC"]
-function mask_vari(variables_names)
-    x = Int64[]  # Initialize an empty array to store the indices of the desired variables
-
-    # Find the indices of specific variable names and append them to the array x
-    x = append!(x, findall(x -> x == "GPP_DAY_1", variables_names))
-    x = append!(x, findall(x -> x == "RECO_NIGHT_1", variables_names))
-    x = append!(x, findall(x -> x == "NEE", variables_names))
-    x = append!(x, findall(x -> x == "SW_IN", variables_names))
-    x = append!(x, findall(x -> x == "TS", variables_names))
-    x = append!(x, findall(x -> x == "SWC", variables_names))
-
-    return x, ["GPP", "RECO", "NEE", "SW_IN", "TS", "SWC"]  # Return the array of indices and a new list of abbreviated variable names
-end
-
-
-#indices of main spots that are of forest ecosystem ([1]) and grass ecosystem ([2])
-function mask_IGBP(IGBP_list)
-    enf = findall(x -> x == "ENF", IGBP_list)  # Find the indices of "ENF" category in the IGBP_list
-    mf = findall(x -> x == "MF", IGBP_list)  # Find the indices of "MF" 
-    dbf = findall(x -> x == "DBF", IGBP_list)  # Find the indices of "DBF" 
-    shr = findall(x -> x == "SHR", IGBP_list)  # Find the indices of "SHR" 
-    cro = findall(x -> x == "CRO", IGBP_list)  # Find the indices of "CRO" 
-    gra = findall(x -> x == "GRA", IGBP_list)  # Find the indices of "GRA" 
-    osh = findall(x -> x == "OSH", IGBP_list)  # Find the indices of "OSH" 
-
-    forest = append!(enf, mf, dbf)  # Combine the indices of forest categories into the forest array
-    grass = append!(shr, gra, osh, cro)  # Combine the indices of grassland categories into the grass array
-
-    return forest, grass  # Return the arrays of indices corresponding to forest and grass categories
-end
 
 
 #clumsy coordinate trafo for indices
@@ -143,6 +112,29 @@ f3_entropy_scaled = characteristics["f3_entropy_scaled"]
 f4_entropy_scaled = characteristics["f4_entropy_scaled"]
 f6_entropy_scaled = characteristics["f6_entropy_scaled"]
 artifacts = characteristics["artifacts"] #boolean: does time series have a window where the qc flag is below whole-series-mean for more then a/2 ? - hints at large chunks of erroneous data
+
+#data characteristics tensor WITHOUT F3 FILTERING
+characteristics = load("/net/scratch/lschulz/data/data_characteristics_without_f3.jld2") #extracted time series qualities
+f4_harm_p = characteristics["f4_harm_p"]
+f6_harm_p = characteristics["f6_harm_p"]
+raw_harm_p = characteristics["raw_harm_p"] #the harmonic power of the raw data
+f4_noise_p = characteristics["f4_noise_p"]
+f6_noise_p = characteristics["f6_noise_p"]
+raw_noise_p = characteristics["raw_noise_p"] #the noise power of the raw data
+raw_entropy = characteristics["raw_entropy"] #the entropy of the raw data
+f4_entropy = characteristics["f4_entropy"]
+f6_entropy = characteristics["f6_entropy"]
+raw_harm_p_scaled = characteristics["raw_harm_p_scaled"] #the harmonic power of the raw data scaled to 3 relative bins comparing all locations, variables at all filters
+f4_harm_p_scaled = characteristics["f4_harm_p_scaled"]
+f6_harm_p_scaled = characteristics["f6_harm_p_scaled"]
+raw_noise_p_scaled = characteristics["raw_noise_p_scaled"] #the noise power of the raw data scaled to 3 relative bins only comparing the raw data
+f4_noise_p_scaled = characteristics["f4_noise_p_scaled"]
+f6_noise_p_scaled = characteristics["f6_noise_p_scaled"]
+raw_entropy_scaled = characteristics["raw_entropy_scaled"] #the entropy of the raw data scaled to 3 relative bins comparing all locations, variables at all filters
+f4_entropy_scaled = characteristics["f4_entropy_scaled"]
+f6_entropy_scaled = characteristics["f6_entropy_scaled"]
+artifacts = characteristics["artifacts"] #boolean: does time series have a window where the qc flag is below whole-series-mean for more then a/2 ? - hints at large chunks of erroneous data
+
 
 #individual time series analysis
 function local_parameters(spot,vari,outdir)
