@@ -20,10 +20,7 @@ savedirname = dir * "test.png"
 #individual overview plot showing the time series, the spectrum, the modes and the spectra of the modes
 #need to be given a Figure() as F in order to combine them to a single figure
 #varname resolved is the name of the variable together with the corresponding unit, making up the time series axis label
-function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
-
-    p = rescale_local_parameters(p,data_tensor)
-    spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa = p
+function mode_figure_flags(F,p,varname_resolved,flags,data_tensor,ylim)
 
     # Rescale local parameters using data tensor
     p = rescale_local_parameters(p, data_tensor)
@@ -39,8 +36,8 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
     spec_xticks = (1:6, string.(1:6))  # X-axis ticks for spectral analysis
     smallfs = fontsize - 6  # Small font size
     fs = fontsize  # Font size
-    speclimits = (freq_domain_N[1], 6.05, 10^-4, 1)  # Limits for spectral analysis plot
-    klimits = (0, modenumber_k + 1, 10^-4, 1)  # Limits for k modes plot
+    speclimits = (freq_domain_N[1], 6.05, 10^-4, 4)  # Limits for spectral analysis plot
+    klimits = (0, modenumber_k + 1, 10^-4, 4)  # Limits for k modes plot
     modeslimits = (0, 2556 / 365.25, -0.04, (2 * modenumber + 2.5) * 0.08)  # Limits for modes plot
     modeyticks = (vcat(0.08:0.08*2:(modenumber)*0.08, (modenumber + 2)*0.08:0.08*2:(2*modenumber + 1)*0.08), string.(vcat(1:2:modenumber, 1:2:modenumber)))  # Y-axis ticks for modes plot
     freqlimits = (1/10, 7, -0.2, modenumber*2 + 2.5)  # Limits for frequency plot
@@ -54,7 +51,7 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
     # Create an axis for time plot
     ax_time = Axis(F[1:2,1:4],
         xticks=Int.(floor.(years[1]:3:years[end])),  # Set x-axis ticks as integers based on the floor of years in intervals of 3
-        limits=(years[1], years[end], minimum(signal) * 1.1, maximum(signal) * 1.1),  # Set the limits of the axis based on years and signal values
+        limits=(years[1], years[end], ylim[1],ylim[2]),  # Set the limits of the axis based on years and signal values
         xminorticksvisible=true,  # Display minor ticks on the x-axis
         xminorgridvisible=true,  # Display minor grid lines on the x-axis
         xminorticks=IntervalsBetween(3),  # Set the interval between minor ticks as 3
@@ -64,6 +61,7 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
         xticklabelsize=fs-2,  # Set x-axis tick label font size
         yticklabelsize=fs-2,  # Set y-axis tick label font size
         ylabelsize=fs,)  # Set y-axis label font size
+        #alignmode = Outside())
 
     hideydecorations!(ax_time, ticks=false, ticklabels=false, grid=false, label=false)  # Hide y-axis decorations (ticks, tick labels, grid, and label)
 
@@ -80,6 +78,7 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
         xticklabelsize=fs-2,  # Set x-axis tick label font size
         yticklabelsize=fs-2,  # Set y-axis tick label font size
         ylabelsize=fs,)  # Set y-axis label font size
+        #alignmode = Outside())
 
     hideydecorations!(ax_spec, ticks=false, ticklabels=false, grid=false)  # Hide y-axis decorations (ticks, tick labels, grid)
 
@@ -95,6 +94,7 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
         xticklabelsize=fs-2,  # Set x-axis tick label font size
         yticklabelsize=fs-2,  # Set y-axis tick label font size
         ylabelsize=fs,)  # Set y-axis label font size
+        #alignmode = Outside())
 
     hideydecorations!(ax_k, grid=false)  # Hide y-axis decorations (grid)
 
@@ -112,6 +112,7 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
         xticklabelsize=fs-2,  # Set x-axis tick label font size
         yticklabelsize=fs-2,  # Set y-axis tick label font size
         ylabelsize=fs,)  # Set y-axis label font size
+        #alignmode = Outside())
 
     hideydecorations!(ax_modes, ticks=false, ticklabels=false, grid=false)  # Hide y-axis decorations (ticks, tick labels, grid)
 
@@ -127,6 +128,7 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
         xticklabelsize=fs-2,  # Set x-axis tick label font size
         yticklabelsize=fs-2,  # Set y-axis tick label font size
         ylabelsize=fs,)  # Set y-axis label font size
+        #alignmode = Outside())
 
     hideydecorations!(ax_freq)  # Hide y-axis decorations
 
@@ -146,9 +148,11 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor)
     # Add lines to the ax_spec axis
     lines!(ax_spec, freq_domain_N, spec_signal, color=color_signal, linewidth=lw, label="signal")
     signal_s = scatter!(ax_spec, freq_domain_N, spec_signal, color=color_signal, markersize=ms, marker=:x)
-    lines!(ax_spec, freq_domain_N, spec_ssa_rc, color=color_ssa, linewidth=lw, label="SSA")
-    lines!(ax_spec, freq_domain_N, spec_nlsa_rc, color=color_nlsa, linewidth=lw, label="NLSA")
-
+    #lines!(ax_spec, freq_domain_N, spec_ssa_rc, color=color_ssa, linewidth=lw, label="SSA")
+    #lines!(ax_spec, freq_domain_N, spec_nlsa_rc, color=color_nlsa, linewidth=lw, label="NLSA")
+    lines!(ax_spec, freq_domain_N, spec_ssa, color=color_ssa, linewidth=lw, label="SSA")
+    lines!(ax_spec, freq_domain_N, spec_nlsa, color=color_nlsa, linewidth=lw, label="NLSA")
+    
     # Add lines to the ax_k axis
     lines!(ax_k, 1:modenumber_k, ssa_cap_var[1:modenumber_k], color=color_ssa, linewidth=lw)
     lines!(ax_k, 1:modenumber_k, nlsa_cap_var[1:modenumber_k], color=color_nlsa, linewidth=lw)
@@ -206,23 +210,53 @@ end
 
 
 
-function large_mode_figure_flags(savedirname,data_tensor,outdir)
+function grid_layout_figure(savedirname,data_tensor,outdir)
+
     F = Figure(resolution=(2400,1000))
+    colsize = 740
+    rowsize1 = 50
+    rowsize2 = 920
 
-    ga = F[1:12, 1:8] = GridLayout()
-    gb = F[1:12, 9:16] = GridLayout()
-    gc = F[1:12, 17:24] = GridLayout()
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+    gt3 = F[1,4] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Outside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Outside())
+    gc = F[2, 4] = GridLayout(1,1,alignmode = Outside())
     
-    #gl1 = F[1,0] = GridLayout()
-    #gl2 = F[2,0] = GridLayout()
-    #gl3 = F[7,0] = GridLayout()
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
 
-    gt1 = F[0,2] = GridLayout()
-    gt2 = F[0,10] = GridLayout()
-    gt3 = F[0,18] = GridLayout()
 
-    #gl = F[8:12,0] = GridLayout()
 
+    colsize!(F.layout, 1, 80)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    colsize!(F.layout, 4, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+    #rowsize!(F.layout,3,rowsize)
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,0)
+
+    Label(gl2[1,1], "signal  ",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    Label(gl2[3,1], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    Label(gl2[6,1], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    elem_1 = [LineElement(color = :grey68, linestyle = :solid)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "QF"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
     """
     local, filtered coordinates!
     """
@@ -234,24 +268,27 @@ function large_mode_figure_flags(savedirname,data_tensor,outdir)
     var = 1
     p = local_parameters(spots[spot],vars[var],outdir)
     flag = flags[:,spots[spot],[6,7,5,2,9,8][var]]
-    mode_figure_flags(ga,p,rich("GPP [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor)
-    title1 = "(a) $(variables_names[vars[var]]) $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+    ylim = [0,20]
+    mode_figure_flags(ga,p,rich("GPP [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) GPP $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
 
     #resolved
     spot = 2
     var = 3
     p = local_parameters(spots[spot],vars[var],outdir)
     flag = flags[:,spots[spot],[6,7,5,2,9,8][var]]
-    mode_figure_flags(gb,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor)
-    title2 = "(b) $(variables_names[vars[var]]) $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+    ylim = [-8,3]
+    mode_figure_flags(gb,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title2 = "(b) NEE $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
 
     #unresolved
     spot = 1
     var = 2
     p = local_parameters(spots[spot],vars[var],outdir)
     flag = flags[:,spots[spot],[6,7,5,2,9,8][var]]
-    mode_figure_flags(gc,p,rich("RECO [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor)
-    title3 = "(c) $(variables_names[vars[var]]) $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+    ylim = [0,20]
+    mode_figure_flags(gc,p,rich("RECO [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title3 = "(c) RECO $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
 
     for (label, layout) in zip([title1,title2,title3], [gt1,gt2,gt3])
         Label(layout[1, 1], label,
@@ -262,22 +299,30 @@ function large_mode_figure_flags(savedirname,data_tensor,outdir)
             )
     end
 
-
-    for g in [ga, gb, gc]
-        g.alignmode = Mixed(right = 0,top=0,bottom=0,left=0)
-    end
-
-    for g in [gt1,gt2,gt3]
-        colgap!(g, 0)
-        rowgap!(g, 0)
-        g.alignmode = Mixed(right = 0,top=0,bottom=0,left=0)
-    end
-
-    #colsize!(F.layout, 0, 15)
-    #colsize!(F.layout, 2, 75)
-    #colsize!(F.layout, 3, 75)
-    #colsize!(F.layout, 4, 75)
-
     save(savedirname,F)
 end
 
+
+#grid_layout_figure(dir*"examples_unfiltered.png",data_raw,outdir_raw)
+#grid_layout_figure(dir*"examples_filtered.png",data_f6,outdir_f6)
+
+
+#sps = [4,6,6,7,5,7,8]
+#vrs = [6,5,6,7,3,2,2]
+#lims = [[0,20],[0,20],[0,20],[15,40],[-5,5],[0,20],[0,10]]
+
+#for (i,j,lim) in zip(sps,vrs,lims)
+#    F = Figure(resolution=(800,1000))
+#    p = local_parameters(spots[i],vars[j],outdir_raw)
+#    flag = flags[:,spots[i],[6,7,5,2,1,9,8][j]]
+#    text = "var"
+#    F = mode_figure_flags(F,p,text,flag,data_raw,lim)
+#    save(dir*"/figs/$(i)_$(j)_unfiltered.png",F)
+
+#    F = Figure(resolution=(800,1000))
+#    p = local_parameters(spots[i],vars[j],outdir_f6)
+#    flag = flags[:,spots[i],[6,7,5,2,1,9,8][j]]
+#    text = "var"
+#    F = mode_figure_flags(F,p,text,flag,data_f6,lim)
+#    save(dir*"/figs/$(i)_$(j)_filtered.png",F)
+#end

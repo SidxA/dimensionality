@@ -26,7 +26,7 @@ color_signal = "grey50"
 lw = 3
 lw_s = 1
 ms = 5
-fontsize = 22
+fontsize = 30
 
 #time series raw data and lowpass filtered data
 #and description of locations,variables,ecosystem types
@@ -77,41 +77,10 @@ nlsa_trends_3 = cycles["nlsa_trends_3"] #the seasonal cycle of the 3a lowpass fi
 nlsa_trends_4 = cycles["nlsa_trends_4"] #the seasonal cycle of the 4a lowpass filtered data by NLSA
 nlsa_trends_6 = cycles["nlsa_trends_6"] #the seasonal cycle of the 6a lowpass filtered data by NLSA
 
-
-
-
 #clumsy coordinate trafo for indices
 spots = mask_IGBP(IGBP_list)[1]
 vars,varnames = mask_vari(variables_names)
 IGBP_reduced = IGBP_list[spots]
-
-#data characteristics tensor
-characteristics = load("/net/scratch/lschulz/data/data_characteristics.jld2") #extracted time series qualities
-f3_harm_p = characteristics["f3_harm_p"] #the harmonic power of the 3a lowpass filtered data  (sum of FFT relative power at f=1,2,3,4 /a relative to complete spectral power)
-f4_harm_p = characteristics["f4_harm_p"]
-f6_harm_p = characteristics["f6_harm_p"]
-raw_harm_p = characteristics["raw_harm_p"] #the harmonic power of the raw data
-f3_noise_p = characteristics["f3_noise_p"] #the noise power of the 3a lowpass filtered data (sum of FFT relative power above f=6/a relative to complete spectral power)
-f4_noise_p = characteristics["f4_noise_p"]
-f6_noise_p = characteristics["f6_noise_p"]
-raw_noise_p = characteristics["raw_noise_p"] #the noise power of the raw data
-raw_entropy = characteristics["raw_entropy"] #the entropy of the raw data
-f3_entropy = characteristics["f3_entropy"] #the entropy of the 3a lowpass filtered data (NN sample entropy, m=2, r = 2*std)
-f4_entropy = characteristics["f4_entropy"]
-f6_entropy = characteristics["f6_entropy"]
-raw_harm_p_scaled = characteristics["raw_harm_p_scaled"] #the harmonic power of the raw data scaled to 3 relative bins comparing all locations, variables at all filters
-f3_harm_p_scaled = characteristics["f3_harm_p_scaled"]
-f4_harm_p_scaled = characteristics["f4_harm_p_scaled"]
-f6_harm_p_scaled = characteristics["f6_harm_p_scaled"]
-raw_noise_p_scaled = characteristics["raw_noise_p_scaled"] #the noise power of the raw data scaled to 3 relative bins only comparing the raw data
-f3_noise_p_scaled = characteristics["f3_noise_p_scaled"]
-f4_noise_p_scaled = characteristics["f4_noise_p_scaled"]
-f6_noise_p_scaled = characteristics["f6_noise_p_scaled"]
-raw_entropy_scaled = characteristics["raw_entropy_scaled"] #the entropy of the raw data scaled to 3 relative bins comparing all locations, variables at all filters
-f3_entropy_scaled = characteristics["f3_entropy_scaled"]
-f4_entropy_scaled = characteristics["f4_entropy_scaled"]
-f6_entropy_scaled = characteristics["f6_entropy_scaled"]
-artifacts = characteristics["artifacts"] #boolean: does time series have a window where the qc flag is below whole-series-mean for more then a/2 ? - hints at large chunks of erroneous data
 
 #data characteristics tensor WITHOUT F3 FILTERING
 characteristics = load("/net/scratch/lschulz/data/data_characteristics_without_f3.jld2") #extracted time series qualities

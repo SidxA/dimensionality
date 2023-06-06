@@ -228,7 +228,7 @@ end
 function sampen3(L)
     m = 2
     # Set the tolerance r as twice the standard deviation of the input sequence L
-    r = 2 * std(L)
+    r = 0.2 * std(L)
     N = length(L)
     B = 0
     A = 0
@@ -260,7 +260,6 @@ end
 function create_data_characteristics()
     # Compute entropy for each data set
     raw_entropy = [sampen3(data_raw[:,i,j]) for i = 1:18, j = 1:16]
-    f3_entropy = [sampen3(data_f3[:,i,j]) for i = 1:18, j = 1:16]
     f4_entropy = [sampen3(data_f4[:,i,j]) for i = 1:18, j = 1:16]
     f6_entropy = [sampen3(data_f6[:,i,j]) for i = 1:18, j = 1:16]
 
@@ -271,21 +270,13 @@ function create_data_characteristics()
     # Compute tensor-based analytics for f4 data
     f4_harm_p, f4_noise_p = tensor_based_analytics(data_f4)
 
-    # Compute tensor-based analytics for f3 data
-    f3_harm_p, f3_noise_p = tensor_based_analytics(data_f3)
-
     # Compute tensor-based analytics for f6 data
     f6_harm_p, f6_noise_p = tensor_based_analytics(data_f6)
 
     # Extract noise, harmonic, and entropy values for each data set
-    noises = [raw_noise_p[spots, vars], f3_noise_p[spots, vars], f4_noise_p[spots, vars], f6_noise_p[spots, vars]]
-    harms = [raw_harm_p[spots, vars], f3_harm_p[spots, vars], f4_harm_p[spots, vars], f6_harm_p[spots, vars]]
-    entropies = [raw_entropy[spots, vars], f3_entropy[spots, vars], f4_entropy[spots, vars], f6_entropy[spots, vars]]
-
-    # Extract noise, harmonic, and entropy values for each data set WITHOUT F3 FILTERING
-    #noises = [raw_noise_p[spots, vars], f4_noise_p[spots, vars], f6_noise_p[spots, vars]]
-    #harms = [raw_harm_p[spots, vars], f4_harm_p[spots, vars], f6_harm_p[spots, vars]]
-    #entropies = [raw_entropy[spots, vars], f4_entropy[spots, vars], f6_entropy[spots, vars]]
+    noises = [raw_noise_p[spots, vars], f4_noise_p[spots, vars], f6_noise_p[spots, vars]]
+    harms = [raw_harm_p[spots, vars], f4_harm_p[spots, vars], f6_harm_p[spots, vars]]
+    entropies = [raw_entropy[spots, vars], f4_entropy[spots, vars], f6_entropy[spots, vars]]
 
     # Scale the noise, harmonic, and entropy values using projection binning
     noises_scaled = projection_binning_intra(noises)
@@ -295,30 +286,24 @@ function create_data_characteristics()
     artifacts = [long_deviation(flags[:,i,j]) for i = spots, j = [6,7,5,2,1,9,8]]
     # Save the computed data characteristics to a file
     jldsave("/net/scratch/lschulz/data/data_characteristics.jld2",
-        f3_harm_p = f3_harm_p,
         f4_harm_p = f4_harm_p,
         f6_harm_p = f6_harm_p,
         raw_harm_p = raw_harm_p,
-        f3_noise_p = f3_noise_p,
         f4_noise_p = f4_noise_p,
         f6_noise_p = f6_noise_p,
         raw_noise_p = raw_noise_p,
         raw_entropy = raw_entropy,
-        f3_entropy = f3_entropy,
         f4_entropy = f4_entropy,
         f6_entropy = f6_entropy,
         raw_harm_p_scaled = harms_scaled[1],
-        f3_harm_p_scaled = harms_scaled[2],
-        f4_harm_p_scaled = harms_scaled[3],
-        f6_harm_p_scaled = harms_scaled[4],
+        f4_harm_p_scaled = harms_scaled[2],
+        f6_harm_p_scaled = harms_scaled[3],
         raw_noise_p_scaled = noises_scaled[1],
-        f3_noise_p_scaled = noises_scaled[2],
-        f4_noise_p_scaled = noises_scaled[3],
-        f6_noise_p_scaled = noises_scaled[4],
+        f4_noise_p_scaled = noises_scaled[2],
+        f6_noise_p_scaled = noises_scaled[3],
         raw_entropy_scaled = entropies_scaled[1],
-        f3_entropy_scaled = entropies_scaled[2],
-        f4_entropy_scaled = entropies_scaled[3],
-        f6_entropy_scaled = entropies_scaled[4],
+        f4_entropy_scaled = entropies_scaled[2],
+        f6_entropy_scaled = entropies_scaled[3],
         artifacts = artifacts,
     )
 end
