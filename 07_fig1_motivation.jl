@@ -67,7 +67,7 @@ function motivation_plot(savedirname, data_tensor,outdir)
 
     # Create figure
     offset = 15
-    tiks = Array(-2:2:2)
+    tiks = Array(-4:4:4)
     yticks = (cat(tiks, tiks .+ offset, dims=1), cat(string.(tiks), string.(tiks), dims=1))
     F = Figure(resolution=(800, 400))
     ax_time = Axis(F[1, 1], xticks=Int.(floor.(years[1]:3:years[end])), yticks=yticks, yminorgridvisible=true, yminorgridstyle=:dot, yminorticks=IntervalsBetween(5), xminorticksvisible=true, xminorgridvisible=true, xminorticks=IntervalsBetween(3), xlabel="time (a)", ylabel=rich("NEE [gC m", superscript("-2"), "d", superscript("-1"), "]"), xlabelsize=fontsize, ylabelsize=fontsize, xticklabelsize=fontsize-4, yticklabelsize=fontsize-4)

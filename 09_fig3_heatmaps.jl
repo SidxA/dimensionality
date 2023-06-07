@@ -40,8 +40,6 @@ function characterization_heatmap(savedirname)
         return ax, hm
     end
     
-
-
     function write_symbol(ax, data, symbol, x_shift, y_shift) # 5bins
         symbol_fontsize_list = [0, 8, 12, 16, 20]  # Font size options for different symbol levels
         for i in 1:size(data)[1]
@@ -91,20 +89,30 @@ function characterization_heatmap(savedirname)
 
 
 
-    F = Figure(resolution = (600,900))
+    F = Figure(resolution = (700,1100))
     
-    g_a = F[1:3,1:10] = GridLayout()
-    g_b = F[1:3,11:20] = GridLayout()
-    g_c = F[4:6,1:10] = GridLayout()
-    g_d = F[4:6,11:20] = GridLayout()
-    g_e = F[7:9,1:10] = GridLayout()
-    g_f = F[7:9,11:20] = GridLayout()
+    g_cbar = F[1,1:2] = GridLayout(1,1, alignmode = Inside())
 
-    g_cbar = F[0,1:20] = GridLayout()
+    g_a = F[2,1] = GridLayout(1,1, alignmode = Inside())
+    g_b = F[2,2] = GridLayout(1,1, alignmode = Inside())
+    g_c = F[3,1] = GridLayout(1,1, alignmode = Inside())
+    g_d = F[3,2] = GridLayout(1,1, alignmode = Inside())
+    g_e = F[4,1] = GridLayout(1,1, alignmode = Inside())
+    g_f = F[4,2] = GridLayout(1,1, alignmode = Inside())
 
-    g_lab_1 = F[2,0] = GridLayout()
-    g_lab_2 = F[5,0] = GridLayout()
-    g_lab_3 = F[8,0] = GridLayout()
+
+    colsize = 280
+    rowsize = 220
+
+    rowsize!(F.layout, 1, 80)
+    rowsize!(F.layout, 2, rowsize)
+    rowsize!(F.layout, 3, rowsize)
+    rowsize!(F.layout, 4, rowsize)
+    colsize!(F.layout,1,colsize)
+    colsize!(F.layout,2,colsize)
+
+    rowgap!(F.layout,10)
+    colgap!(F.layout,10)
 
 
     highclip = 8
@@ -114,7 +122,7 @@ function characterization_heatmap(savedirname)
     for g in [g_a,g_b,g_c,g_d,g_e,g_f]
         colgap!(g, 0)
         rowgap!(g, 0)
-        g.alignmode = Mixed(right = 0,top=0,bottom=0)
+        #g.alignmode = Mixed(right = 0,top=0,bottom=0)
     end
 
     ax_a,hm_a = plot_heatmap(g_a,ssa_h_raw)
@@ -144,11 +152,11 @@ function characterization_heatmap(savedirname)
 
     subfigure_labels = [
         L"\text{(a) SSA      }",
-        L"\text{(b) NLSA      }",
-        L"\text{(c) SSA           } f \leq 6/\text{a}",
-        L"\text{(d) NLSA        } f \leq 6/\text{a}",
-        L"\text{(e) SSA           } f \leq 4/\text{a}",
-        L"\text{(f) NLSA         } f \leq 4/\text{a}"
+        L"\text{(b) NLSA        }",
+        L"\text{(c) SSA      } f \leq 6\text{ a}^{-1}",
+        L"\text{(d) NLSA    } f \leq 6\text{ a}^{-1}",
+        L"\text{(e) SSA      } f \leq 4\text{ a}^{-1}",
+        L"\text{(f) NLSA    } f \leq 4\text{ a}^{-1}"
     ]
     gs = [g_a,g_b,g_c,g_d,g_e,g_f]
 
@@ -156,9 +164,9 @@ function characterization_heatmap(savedirname)
     for (label, layout) in zip(subfigure_labels,gs)
         Label(layout[1, :, Top()], label,
             fontsize = fontsize,
-            padding = (-1, -1, -1, -1),
+            #padding = (-1, -1, -1, -1),
             halign = :left)
-        layout.alignmode = Mixed(top=0)
+        #layout.alignmode = Mixed(top=0)
     end
     """
     for g in [g_a,g_b,g_c,g_d,g_e,g_f]
@@ -199,15 +207,6 @@ function characterization_heatmap(savedirname)
         end
     end
 
-    for g in [g_a,g_b,g_c,g_d,g_e,g_f]#,g_cbar,g_lab_1,g_lab_2,g_lab_3]
-        colgap!(g, 0)
-        rowgap!(g, 0)
-        g.alignmode = Mixed(right = 0,top=0)
-    end
-
-    for g in [g_a,g_c,g_e]
-        g.alignmode = Mixed(left = 0)
-    end
 
     save(savedirname,F)
 
