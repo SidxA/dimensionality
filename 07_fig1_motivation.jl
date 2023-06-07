@@ -99,7 +99,16 @@ function motivation_plot(savedirname, data_tensor,outdir)
 
     # Customize axis and legend
     hidespines!(ax_time, :t, :r)
-    axislegend(ax_time, tellheight=false, tellwidth=false, margin=(4, 4, 4, 4), halign=:right, valign=:bottom, orientation=:horizontal, labelsize=fontsize-2)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    axislegend(ax_time,    [elem_1, elem_2, elem_3],
+    ["Signal", "SSA", "NLSA"],
+    labelsize = fontsize,
+    halign=:right, valign=:bottom, orientation=:horizontal)
+
+
 
     # Save the figure
     save(savedirname, F)

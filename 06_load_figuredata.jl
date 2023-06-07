@@ -22,7 +22,7 @@ threshold2 = 0.15 #the harmonicity estimation
 #plotting settings
 color_ssa = "darkgreen"
 color_nlsa = "purple"
-color_signal = "grey50"
+color_signal = "darkorange"
 lw = 3
 lw_s = 1
 ms = 5
