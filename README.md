@@ -64,6 +64,34 @@ save(savedirname,F)`
 - `heatmap_numbers` produces heatmap with numbers, focused solely on differences in extracted number of harmonics between different noise filters
 - `characterization_heatmap` also includes little symbolls for noise content, signal sinusoidality, signal entropy (NN sample entropy) and quality flag artefacts
 
+## 10_workflow_figures.jl
+
+- pictures used in the workflow diagram
+
+# DATA
+
+
+time series raw data and lowpass filtered dataand description of locations,variables,ecosystem types, qc quality flags
+`"/net/scratch/lschulz/data/time_series.jld2"`
+
+individual dimension-reduction results
+`outdir_raw = "/net/scratch/lschulz/data/dimensionreduction/raw/"
+outdir_f3 = "/net/scratch/lschulz/data/dimensionreduction/lowpass3/"
+outdir_f4 = "/net/scratch/lschulz/data/dimensionreduction/lowpass4/"
+outdir_f6 = "/net/scratch/lschulz/data/dimensionreduction/lowpass6/"`
+
+seasonal cycle prior to the filter of only considering intact mode pairs (for old heatmap)
+`"/net/scratch/lschulz/data/seasonal_cycle.jld2"`
+
+
+data characteristics 
+`"/net/scratch/lschulz/data/data_characteristics_without_f3.jld2"`
+
+new seasonal cycle information based on the pair filtering (for new heatmap)
+`"/net/scratch/lschulz/data/trends.jld2"`
+
+
+
 # Theory
 
 This repository contains code for the time-series analysis of climatic data gathered from the FLUXNET network. The analysis is based on two dimensionality-reduction methods: Singular Spectrum Analysis (SSA) and Nonlinear Laplacian Spectral Analysis (NLSA).
