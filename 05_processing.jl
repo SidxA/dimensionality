@@ -31,6 +31,7 @@ spots = mask_IGBP(IGBP_list)[1]
 vars,varnames = mask_vari(variables_names)
 IGBP_reduced = IGBP_list[spots]
 
+#old ones
 function create_trend_tensors(N, W)
     # Initialize output matrices with zeros
     ssa_h = zeros(n_spots, n_vars)
@@ -62,8 +63,270 @@ function create_trend_tensors(N, W)
             end
         end
     end
-    return ssa_h, nlsa_h, ssa_trends, nlsa_trends
+    return Int64.(ssa_h), Int64.(nlsa_h), ssa_trends, nlsa_trends
 end
+
+#only counting complete pairs
+function create_trend_tensors_v2(outdir)
+
+        #individual time series analysis
+    function local_parameters(spot,vari,outdir)
+
+        normalizer(x) = x ./ maximum(x)
+
+        function gauss(x, p)
+            # Gaussian function with parameters x0, gamma, and sigma
+            x0 = p[1]
+            gamma = p[2]
+            sigma = p[3]
+            @. return gamma * exp.(-(x - x0)^2 / sigma^2 / 2)
+        end
+        
+        function fit_gauss(yvalues, xvalues)
+            # Fit the Gaussian function to the data points
+            onebins = xvalues
+            bins = yvalues
+            p0 = ones(3) .* 5
+            return coef(curve_fit(gauss, bins, onebins, p0))
+        end
+        
+        function harmonic_gaussian_per_mode(mode_spec, freqstart_w, freqend_w, freqs_w)
+            # Fit a Gaussian model to a specific mode's spectrum within the specified frequency range
+            spec = mode_spec
+            spec[1:freqstart_w] .= 0
+            spec[freqend_w:end] .= 0
+        
+            try
+                # Attempt to fit the Gaussian function to the spectrum
+                return fit_gauss(freqs_w, spec)
+            catch
+                # Return [0, 0, 0] if fitting fails
+                return [0, 0, 0]
+            end
+        end
+        
+        
+        function harmonicity_gauss(gausslist,eof_spec,freqstart_w,freqs_w)
+        
+            # Initialize empty arrays to store the harmonic and mixed frequency components, as well as their respective frequencies and residual components
+            li_harmonics = Int64[] # array to store the indices of harmonic frequency components
+            li_mixed = Int64[] # array to store the indices of mixed frequency components
+            li_h_freq = Float64[] # array to store the frequencies of harmonic frequency components
+            li_m_freq = Float64[] # array to store the frequencies of mixed frequency components
+            li_residual=Int64[] # array to store the indices of frequency components with high residual values
+            
+            # Loop through each frequency component in the spectral components matrix eof_spec
+            for i in 1:k
+                # Get the ith spectral component
+                mode = eof_spec[:,i]
+                
+                # Set the values of the first freqstart_w elements of the mode array to zero
+                mode[1:freqstart_w] .= 0
+                
+                # Get the parameters of the Gaussian for the ith frequency component
+                freq, value,sigma = gausslist[i]
+        
+                # Compute the Gaussian peak using the Gaussian function gauss defined earlier and the freqs_w array
+                peak = gauss(freqs_w,(freq,value,sigma))
+                
+                # Compute the residual by subtracting the Gaussian peak from the mode array
+                residual = mode .- peak
+        
+                # Determine if the ith frequency component is harmonic, mixed, or has a high residual value
+                if maximum(residual .+ 0.0)/threshold1 <= value &&  any(abs.((1:8) .- freq).<=threshold2)
+                    li_harmonics = append!(li_harmonics,i)
+                    li_h_freq = append!(li_h_freq,freq)
+                elseif maximum(residual .+ 0.0)/threshold1 >= value && any(abs.((1:8) .- freq).<=threshold2)
+                    li_mixed = append!(li_mixed,i)
+                    li_m_freq = append!(li_m_freq,freq)
+                elseif maximum(residual .+ 0.0)/threshold1 >= value
+                    li_residual = append!(li_residual,i)
+                else
+                    #println("no peak")
+                end
+        
+            end
+        
+            # Return the harmonic frequency component indices
+            return li_harmonics#,li_mixed,li_h_freq,li_m_freq,li_residual
+        end
+
+        #depending on N
+        # Time parameters
+        Ts = 1 / 365.25  # Time step (in years)
+        t0 = 0  # Initial time
+        tmax = t0 + (N - 1) * Ts  # Maximum time
+        t = t0:Ts:tmax  # Time vector
+
+        # Frequency parameters
+        freqs = fftfreq(length(t), 1.0 / Ts) |> fftshift  # Frequency values
+        freqstart = findall(x -> x >= 1 / 12, freqs)[1]  # Index of the starting frequency
+        freqend = findall(x -> x >= 6, freqs)[1]  # Index of the ending frequency
+        freq_domain_N = freqs[freqstart:freqend]  # Frequency domain within the specified range
+
+        # Year values
+        years = ((1:N) ./ 365) .+ startyear  # Year values corresponding to each time step
+
+
+        #depending on W
+        # Time parameters for windowed data
+        tw = t0:Ts:(t0 + (W - 1) * Ts)  # Time vector for the windowed data
+
+        # Frequency parameters for windowed data
+        freqs_w = fftfreq(length(tw), 1.0 / Ts) |> fftshift  # Frequency values for the windowed data
+        freqstart_w = findall(x -> x >= 1 / 12, freqs_w)[1]  # Index of the starting frequency for the windowed data
+        freqend_w = findall(x -> x >= 6, freqs_w)[1]  # Index of the ending frequency for the windowed data
+        freq_domain_w = freqs_w[freqstart_w:freqend_w]  # Frequency domain within the specified range for the windowed data
+
+
+        #read in ssa nlsa results
+        # Create the filenames for loading the results
+        Filename_ssa = outdir * join(["ssa", W, spot, vari, preproc], "_") * "jld2"  # Filename for SSA results
+        Filename_nlsa = outdir * join(["diff", W, spot, vari, preproc], "_") * "jld2"  # Filename for NLSA results
+
+        # Load the SSA and NLSA result files
+        file_ssa = load(Filename_ssa)  # Load the SSA result file
+        file_nlsa = load(Filename_nlsa)  # Load the NLSA result file
+
+
+        signal = file_ssa["signal"]
+
+        # Extract signal from the SSA result file
+        signal = file_ssa["signal"]
+
+        # Extract SSA results
+        ssa_lambda = file_ssa["lambda"]
+        ssa_indices = sortperm(ssa_lambda, rev=true)
+        ssa_Eof = file_ssa["EOF"][:, ssa_indices]
+        ssa_PC = file_ssa["PC"][:, ssa_indices]
+        ssa_RC = file_ssa["RC"][:, ssa_indices]
+        ssa_lambda = ssa_lambda[ssa_indices]
+        ssa_cap_var = ssa_lambda
+        ssa_rec = ssa_RC
+
+        # Extract NLSA results
+        nlsa_lambda = file_nlsa["lambda"]
+        nlsa_indices = sortperm(nlsa_lambda, rev=true)
+        nlsa_Eof = file_nlsa["EOF"][:, nlsa_indices]
+        nlsa_PC = file_nlsa["PC"][:, nlsa_indices]
+        nlsa_RC = file_nlsa["RC"][:, nlsa_indices]
+        nlsa_lambda = nlsa_lambda[nlsa_indices]
+        nlsa_cap_var = nlsa_lambda
+
+        nlsa_rec = nlsa_RC
+        nlsa_eps = file_nlsa["eps"]
+
+
+        #spectrum of signal and RC
+        spec_signal = (abs.(fft(signal) |> fftshift)[freqstart:freqend] |> normalizer )
+        spec_ssa_rc = (abs.(fft(ssa_rec) |> fftshift)[freqstart:freqend] |> normalizer )
+        spec_nlsa_rc = (abs.(fft(nlsa_rec) |> fftshift)[freqstart:freqend] |> normalizer )
+
+        #spectrum of individual eof
+        spec_ssa_eof = hcat([abs.(fft(ssa_Eof[:,i]) |> fftshift)|> normalizer for i in 1:k]...) #[freqstart_w:freqend_w] 
+        spec_nlsa_eof = hcat([abs.(fft(nlsa_Eof[:,i]) |> fftshift)|> normalizer for i in 1:k]...) #[freqstart_w:freqend_w] 
+
+        #gaussian tables
+        gaussian_ssa = [harmonic_gaussian_per_mode(spec_ssa_eof[:,i],freqstart_w,freqend_w,freqs_w) for i in 1:k]
+        gaussian_nlsa = [harmonic_gaussian_per_mode(spec_nlsa_eof[:,i],freqstart_w,freqend_w,freqs_w) for i in 1:k]
+
+        #harmonic indices
+        li_harmonics_ssa = harmonicity_gauss(gaussian_ssa,spec_ssa_eof,freqstart_w,freqs_w)
+        li_harmonics_nlsa = harmonicity_gauss(gaussian_nlsa,spec_nlsa_eof,freqstart_w,freqs_w)
+
+        #seasonality behavior
+        ssa_trend_harm = sum(ssa_RC[:,li_harmonics_ssa],dims=2)[:]
+        nlsa_trend_harm = sum(nlsa_RC[:,li_harmonics_nlsa],dims=2)[:]
+
+        #captured frequencies
+        freq_ssa = [round(gaussian_ssa[i][1],digits=1) for i in li_harmonics_ssa]
+        freq_nlsa = [round(gaussian_nlsa[i][1],digits=1) for i in li_harmonics_nlsa]
+
+        #captured variance
+        ssa_harm_var = round.(ssa_lambda[li_harmonics_ssa],digits=3)
+        nlsa_harm_var = round.(nlsa_lambda[li_harmonics_nlsa],digits=3)
+
+        #spectra of the seasonality and the residuals
+        spec_ssa = (abs.(fft(ssa_trend_harm) |> fftshift)[freqstart:freqend]  |> normalizer)
+        spec_res_ssa = (abs.(fft(signal .- ssa_trend_harm) |> fftshift)[freqstart:freqend]  |> normalizer)
+        spec_nlsa = (abs.(fft(nlsa_trend_harm) |> fftshift)[freqstart:freqend]  |> normalizer)
+        spec_res_nlsa = (abs.(fft(signal .- nlsa_trend_harm) |> fftshift)[freqstart:freqend] |> normalizer )
+
+        #varname
+        varname = variables_names[vari]
+        igbpclass = IGBP_list[spot]
+        return [
+            spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa
+        ]
+    end
+
+    function fully_resolved(freq_list)
+        b_ones = length(findall(x->abs(x-1.0)<=0.15,freq_list)) >= 2
+        b_twos = length(findall(x->abs(x-2.0)<=0.15,freq_list)) >= 2
+    
+        #completely resolved
+        if b_ones && b_twos
+            return 3
+        elseif b_ones
+            return 2
+        elseif length(freq_list) > 0
+            return 1
+        else
+            return 0
+        end
+    end
+
+    #needs to eat li_harmonics_nlsa
+    function fully_resolved_trend_ind(freq_list,li_harmonics)
+        b_ones = length(findall(x->abs(x-1.0)<=0.15,freq_list)) >= 2
+        n_ones = findall(x->abs(x-1.0)<=0.15,freq_list)
+        b_twos = length(findall(x->abs(x-2.0)<=0.15,freq_list)) >= 2
+        n_twos = findall(x->abs(x-2.0)<=0.15,freq_list)
+        b_threes = length(findall(x->abs(x-3.0)<=0.15,freq_list)) >= 2
+        n_threes = findall(x->abs(x-3.0)<=0.15,freq_list)
+        b_fours = length(findall(x->abs(x-4.0)<=0.15,freq_list)) >= 2
+        n_fours = findall(x->abs(x-4.0)<=0.15,freq_list)
+        b_fives = length(findall(x->abs(x-5.0)<=0.15,freq_list)) >= 2
+        n_fives = findall(x->abs(x-5.0)<=0.15,freq_list)
+
+        trend_ind = li_harmonics[cat(n_ones,n_twos,n_threes,n_fours,n_fives,dims=1)]
+        return trend_ind
+    end
+
+    l_ssa = zeros(9,7)
+    l_nlsa = zeros(9,7)
+    ssa_trends = zeros(9, 7, N)
+    nlsa_trends = zeros(9, 7, N)
+    ssa_trends_pure = zeros(9, 7, N)
+    nlsa_trends_pure = zeros(9, 7, N)
+
+    for (i,spot) = enumerate(spots),(j,vari) = enumerate(vars)
+        p = local_parameters(spot,vari,outdir)
+        spoti, W, vari, years, varname, igbpclass, freq_domain_N, freq_domain_w, freqs_w, freqs, signal, ssa_Eof, nlsa_Eof, nlsa_eps, ssa_rec, nlsa_rec, ssa_cap_var, nlsa_cap_var, spec_signal, spec_ssa_rc, spec_nlsa_rc, spec_ssa_eof, spec_nlsa_eof, gaussian_ssa, gaussian_nlsa, li_harmonics_ssa, li_harmonics_nlsa, ssa_trend_harm, nlsa_trend_harm, freq_ssa, freq_nlsa, ssa_harm_var, nlsa_harm_var, spec_ssa, spec_res_ssa, spec_nlsa, spec_res_nlsa = p
+        l_ssa[i,j] = fully_resolved(freq_ssa)
+        l_nlsa[i,j] = fully_resolved(freq_nlsa)
+        ssa_trend_inds = fully_resolved_trend_ind(freq_ssa,li_harmonics_ssa)
+        nlsa_trend_inds = fully_resolved_trend_ind(freq_nlsa,li_harmonics_nlsa)
+        ssa_trends_pure[i,j,:] = sum(ssa_rec[:,ssa_trend_inds],dims=2)[:]
+        nlsa_trends_pure[i,j,:] = sum(nlsa_rec[:,nlsa_trend_inds],dims=2)[:]
+        ssa_trends[i,j,:] = ssa_trend_harm
+        nlsa_trends[i,j,:] = nlsa_trend_harm
+    end
+
+    return Int64.(l_ssa), Int64.(l_nlsa), ssa_trends_pure, nlsa_trends_pure, ssa_trends, nlsa_trends
+end
+
+function calculate_f_trends() # for v2
+    trends_raw = create_trend_tensors_v2(outdir_raw)
+    trends_f4 = create_trend_tensors_v2(outdir_f4)
+    trends_f6 = create_trend_tensors_v2(outdir_f6)
+    jldsave("/net/scratch/lschulz/data/trends.jld2",
+        trends_raw = trends_raw,
+        trends_f4 = trends_f4,
+        trends_f6 = trends_f6,
+    )
+end
+
 
 function regularity(signal)
     Ts = 1 / 365.25

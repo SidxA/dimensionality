@@ -5596,3 +5596,194 @@ f3_entropy_scaled = characteristics["f3_entropy_scaled"]
 f4_entropy_scaled = characteristics["f4_entropy_scaled"]
 f6_entropy_scaled = characteristics["f6_entropy_scaled"]
 artifacts = characteristics["artifacts"] #boolean: does time series have a window where the qc flag is below whole-series-mean for more then a/2 ? - hints at large chunks of erroneous data
+
+
+
+function grid_layout_figure(savedirname,data_tensor,outdir)
+
+    F = Figure(resolution=(2400,1000))
+    colsize = 740
+    rowsize1 = 50
+    rowsize2 = 920
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+    gt3 = F[1,4] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Outside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Outside())
+    gc = F[2, 4] = GridLayout(1,1,alignmode = Outside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+
+    colsize!(F.layout, 1, 80)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    colsize!(F.layout, 4, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+    #rowsize!(F.layout,3,rowsize)
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,0)
+
+    Label(gl2[1,1], "signal  ",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    Label(gl2[3,1], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    Label(gl2[6,1], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "QF"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+    """
+    local, filtered coordinates!
+    """
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+    #measurement
+    spot = 8
+    var = 1
+    p = local_parameters(spots[spot],vars[var],outdir)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [0,20]
+    mode_figure_flags(ga,p,rich("GPP [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) GPP $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+
+    #resolved
+    spot = 2
+    var = 3
+    p = local_parameters(spots[spot],vars[var],outdir)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [-8,3]
+    mode_figure_flags(gb,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title2 = "(b) NEE $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+
+    #unresolved
+    spot = 5
+    var = 3
+    p = local_parameters(spots[spot],vars[var],outdir)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [-5,5]
+    mode_figure_flags(gc,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title3 = "(c) NEE $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+
+    for (label, layout) in zip([title1,title2,title3], [gt1,gt2,gt3])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font = :bold,
+            #padding = (0, 5, 5, 0),
+            #halign = :right
+            )
+    end
+
+    save(savedirname,F)
+end
+
+
+#grid_layout_figure(dir*"examples_unfiltered.pdf",data_raw,outdir_raw)
+#grid_layout_figure(dir*"examples_filtered.pdf",data_f6,outdir_f6)
+
+
+function grid_layout_figure_appendix(savedirname,data_tensor,outdir)
+
+    F = Figure(resolution=(2400,1000))
+    colsize = 740
+    rowsize1 = 50
+    rowsize2 = 920
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+    gt3 = F[1,4] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Outside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Outside())
+    gc = F[2, 4] = GridLayout(1,1,alignmode = Outside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+
+    colsize!(F.layout, 1, 80)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    colsize!(F.layout, 4, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+    #rowsize!(F.layout,3,rowsize)
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,0)
+
+    Label(gl2[1,1], "signal  ",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    Label(gl2[3,1], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    Label(gl2[6,1], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "QF"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+    """
+    local, filtered coordinates!
+    """
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+    #measurement
+    spot = 5
+    var = 4
+    p = local_parameters(spots[spot],vars[var],outdir)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [0,400]
+    mode_figure_flags(ga,p,rich("SW_IN [W m", superscript("-2"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) SW_IN $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+
+    #resolved
+    spot = 7
+    var = 6
+    p = local_parameters(spots[spot],vars[var],outdir)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [0,30]
+    mode_figure_flags(gb,p,rich("TS [deg C]"),flag,data_tensor,ylim)
+    title2 = "(b) TS $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+
+    #unresolved
+    spot = 2
+    var = 7
+    p = local_parameters(spots[spot],vars[var],outdir)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [0,50]
+    mode_figure_flags(gc,p,rich("SWC [%]"),flag,data_tensor,ylim)
+    title3 = "(c) SWC $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+
+    for (label, layout) in zip([title1,title2,title3], [gt1,gt2,gt3])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font = :bold,
+            #padding = (0, 5, 5, 0),
+            #halign = :right
+            )
+    end
+
+    save(savedirname,F)
+end

@@ -33,10 +33,10 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor,ylim)
     modenumber_k = 16  # Total number of k modes
     xstep_k = 4  # Step size for k modes
     k_xticks = (xstep_k:xstep_k:modenumber_k, string.(xstep_k:xstep_k:modenumber_k))  # X-axis ticks for k modes
-    spec_xticks = (1:6, string.(1:6))  # X-axis ticks for spectral analysis
+    spec_xticks = (1:7, string.(1:7))  # X-axis ticks for spectral analysis
     smallfs = fontsize - 6  # Small font size
     fs = fontsize  # Font size
-    speclimits = (freq_domain_N[1], 6.05, 10^-4, 4)  # Limits for spectral analysis plot
+    speclimits = (freq_domain_N[1], 7.05, 10^-4, 4)  # Limits for spectral analysis plot
     klimits = (0, modenumber_k + 1, 10^-4, 4)  # Limits for k modes plot
     modeslimits = (0, 2556 / 365.25, -0.04, (2 * modenumber + 2.5) * 0.08)  # Limits for modes plot
     modeyticks = (vcat(0.08:0.08*2:(modenumber)*0.08, (modenumber + 2)*0.08:0.08*2:(2*modenumber + 1)*0.08), string.(vcat(1:2:modenumber, 1:2:modenumber)))  # Y-axis ticks for modes plot
@@ -207,142 +207,70 @@ function mode_figure_flags(F,p,varname_resolved,flags,data_tensor,ylim)
     linkyaxes!(ax_spec, ax_k)
 
 
-    return F
+    return [ax_time,ax_spec,ax_k,ax_modes,ax_freq]
 end
 
 
 
-function grid_layout_figure(savedirname,data_tensor,outdir)
 
-    F = Figure(resolution=(2400,1000))
-    colsize = 740
+function examples_regular(savedirname)
+
+    F = Figure(resolution=(1600,1000))
+    colsize = 655
     rowsize1 = 50
-    rowsize2 = 920
+    rowsize2 = 840
 
     gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
     gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
-    gt3 = F[1,4] = GridLayout(1,1, alignmode = Outside())
 
-    ga = F[2, 2] = GridLayout(1,1,alignmode = Outside())
-    gb = F[2, 3] = GridLayout(1,1,alignmode = Outside())
-    gc = F[2, 4] = GridLayout(1,1,alignmode = Outside())
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Inside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Inside())
     
     gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
     gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
 
 
-
-    colsize!(F.layout, 1, 80)
-    colsize!(F.layout, 2, colsize)
-    colsize!(F.layout, 3, colsize)
-    colsize!(F.layout, 4, colsize)
-    rowsize!(F.layout,1,rowsize1)
-    rowsize!(F.layout,2,rowsize2)
-    #rowsize!(F.layout,3,rowsize)
-
-    rowgap!(F.layout,0)
-    colgap!(F.layout,0)
-
-    Label(gl2[1,1], "signal  ",rotation=pi/2,fontsize=fontsize+4,font=:bold)
-    Label(gl2[3,1], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
-    Label(gl2[6,1], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
-
-    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
-    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
-    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
-    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
-        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
-
-    Legend(gl2[7,1],
-    [elem_1, elem_2, elem_3, elem_4],
-    ["Signal", "SSA", "NLSA", "QF"],
-    labelsize = fontsize+4,padding=(20,20,0,0))
-
-    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
-    """
-    local, filtered coordinates!
-    """
-
     spots = mask_IGBP(IGBP_list)[1]
     vars = mask_vari(variables_names)[1]
-    #measurement
+
+    #unfiltered
     spot = 8
     var = 1
-    p = local_parameters(spots[spot],vars[var],outdir)
+    p = local_parameters(spots[spot],vars[var],outdir_raw)
     flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
-    ylim = [0,20]
-    mode_figure_flags(ga,p,rich("GPP [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
-    title1 = "(a) GPP $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+    ylim = [-1,20]
+    axes = mode_figure_flags(ga,p,rich("GPP [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) unfiltered  "
 
-    #resolved
-    spot = 2
-    var = 3
-    p = local_parameters(spots[spot],vars[var],outdir)
-    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
-    ylim = [-8,3]
-    mode_figure_flags(gb,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
-    title2 = "(b) NEE $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+    #filtered
+    p = local_parameters(spots[spot],vars[var],outdir_f6)
+    axes = mode_figure_flags(gb,p,rich("GPP [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title2 = "(b) filtered  "
 
-    #unresolved
-    spot = 5
-    var = 3
-    p = local_parameters(spots[spot],vars[var],outdir)
-    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
-    ylim = [-5,5]
-    mode_figure_flags(gc,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
-    title3 = "(c) NEE $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
+    [hideydecorations!(ax,grid=:false,ticks=:false) for ax in axes]
 
-    for (label, layout) in zip([title1,title2,title3], [gt1,gt2,gt3])
-        Label(layout[1, 1], label,
-            fontsize = fontsize +4,
-            font = :bold,
-            #padding = (0, 5, 5, 0),
-            #halign = :right
-            )
-    end
-
-    save(savedirname,F)
-end
-
-
-#grid_layout_figure(dir*"examples_unfiltered.pdf",data_raw,outdir_raw)
-#grid_layout_figure(dir*"examples_filtered.pdf",data_f6,outdir_f6)
-
-
-function grid_layout_figure_appendix(savedirname,data_tensor,outdir)
-
-    F = Figure(resolution=(2400,1000))
-    colsize = 740
-    rowsize1 = 50
-    rowsize2 = 920
-
-    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
-    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
-    gt3 = F[1,4] = GridLayout(1,1, alignmode = Outside())
-
-    ga = F[2, 2] = GridLayout(1,1,alignmode = Outside())
-    gb = F[2, 3] = GridLayout(1,1,alignmode = Outside())
-    gc = F[2, 4] = GridLayout(1,1,alignmode = Outside())
-    
-    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
-    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
-
-
-
-    colsize!(F.layout, 1, 80)
+    colsize!(F.layout, 1, 100)
     colsize!(F.layout, 2, colsize)
     colsize!(F.layout, 3, colsize)
-    colsize!(F.layout, 4, colsize)
     rowsize!(F.layout,1,rowsize1)
     rowsize!(F.layout,2,rowsize2)
-    #rowsize!(F.layout,3,rowsize)
+
 
     rowgap!(F.layout,0)
-    colgap!(F.layout,0)
+    colgap!(F.layout,1,5)
+    colgap!(F.layout,2,20)
 
-    Label(gl2[1,1], "signal  ",rotation=pi/2,fontsize=fontsize+4,font=:bold)
-    Label(gl2[3,1], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
-    Label(gl2[6,1], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    Label(gl2[1,2], "modes            spectra          signal  ",
+    rotation=pi/2,fontsize=fontsize+4,font=:bold,halign=:right)
+    #Label(gl2[2,2], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    #Label(gl2[3,2], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    Label(gl2[1,1],
+    "GPP $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])",
+    rotation=pi/2,
+    font=:bold,
+    fontsize=fontsize+4,
+    halign=:right)
 
     elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
     elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
@@ -350,53 +278,554 @@ function grid_layout_figure_appendix(savedirname,data_tensor,outdir)
     elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
         points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
 
-    Legend(gl2[7,1],
+    Legend(gl2[7,1:2],
     [elem_1, elem_2, elem_3, elem_4],
-    ["Signal", "SSA", "NLSA", "QF"],
+    ["Signal", "SSA", "NLSA", "Q flag"],
     labelsize = fontsize+4,padding=(20,20,0,0))
 
     Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
-    """
-    local, filtered coordinates!
-    """
 
-    spots = mask_IGBP(IGBP_list)[1]
-    vars = mask_vari(variables_names)[1]
-    #measurement
-    spot = 5
-    var = 4
-    p = local_parameters(spots[spot],vars[var],outdir)
-    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
-    ylim = [0,400]
-    mode_figure_flags(ga,p,rich("SW_IN [W m", superscript("-2"),"]"),flag,data_tensor,ylim)
-    title1 = "(a) SW_IN $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
 
-    #resolved
-    spot = 7
-    var = 6
-    p = local_parameters(spots[spot],vars[var],outdir)
-    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
-    ylim = [0,30]
-    mode_figure_flags(gb,p,rich("TS [deg C]"),flag,data_tensor,ylim)
-    title2 = "(b) TS $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
-
-    #unresolved
-    spot = 2
-    var = 7
-    p = local_parameters(spots[spot],vars[var],outdir)
-    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
-    ylim = [0,50]
-    mode_figure_flags(gc,p,rich("SWC [%]"),flag,data_tensor,ylim)
-    title3 = "(c) SWC $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])"
-
-    for (label, layout) in zip([title1,title2,title3], [gt1,gt2,gt3])
+    for (label, layout) in zip([title1,title2], [gt1,gt2])
         Label(layout[1, 1], label,
             fontsize = fontsize +4,
-            font = :bold,
-            #padding = (0, 5, 5, 0),
-            #halign = :right
+            font=:bold,
+            padding = (0, 5, 20, 20),
+            halign = :right,
+            justification = :right
             )
     end
 
     save(savedirname,F)
+
 end
+
+function examples_resolved(savedirname)
+
+    F = Figure(resolution=(1600,1000))
+    colsize = 655
+    rowsize1 = 50
+    rowsize2 = 840
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Inside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Inside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+
+    #unfiltered
+    spot = 2
+    var = 3
+    p = local_parameters(spots[spot],vars[var],outdir_raw)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [-8,3]
+    axes = mode_figure_flags(ga,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) unfiltered  "
+
+    #filtered
+    p = local_parameters(spots[spot],vars[var],outdir_f6)
+    axes = mode_figure_flags(gb,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title2 = "(b) filtered  "
+
+    [hideydecorations!(ax,grid=:false,ticks=:false) for ax in axes]
+
+    colsize!(F.layout, 1, 100)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,1,5)
+    colgap!(F.layout,2,20)
+
+    Label(gl2[1,2], "modes            spectra          signal  ",
+    rotation=pi/2,fontsize=fontsize+4,font=:bold,halign=:right)
+    #Label(gl2[2,2], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    #Label(gl2[3,2], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    Label(gl2[1,1],
+    "NEE $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])",
+    rotation=pi/2,
+    font=:bold,
+    fontsize=fontsize+4,
+    halign=:right)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1:2],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "Q flag"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+
+
+    for (label, layout) in zip([title1,title2], [gt1,gt2])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font=:bold,
+            padding = (0, 5, 20, 20),
+            halign = :right,
+            justification = :right
+            )
+    end
+
+    save(savedirname,F)
+
+end
+
+function examples_unresolved(savedirname)
+
+    F = Figure(resolution=(1600,1000))
+    colsize = 655
+    rowsize1 = 50
+    rowsize2 = 840
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Inside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Inside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+
+    #unfiltered
+    spot = 5
+    var = 3
+    p = local_parameters(spots[spot],vars[var],outdir_raw)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [-5,5]
+    axes = mode_figure_flags(ga,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) unfiltered  "
+
+    #filtered
+    p = local_parameters(spots[spot],vars[var],outdir_f6)
+    axes = mode_figure_flags(gb,p,rich("NEE [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title2 = "(b) filtered  "
+
+    [hideydecorations!(ax,grid=:false,ticks=:false) for ax in axes]
+
+    colsize!(F.layout, 1, 100)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,1,5)
+    colgap!(F.layout,2,20)
+
+    Label(gl2[1,2], "modes            spectra          signal  ",
+    rotation=pi/2,fontsize=fontsize+4,font=:bold,halign=:right)
+    #Label(gl2[2,2], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    #Label(gl2[3,2], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    Label(gl2[1,1],
+    "NEE $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])",
+    rotation=pi/2,
+    font=:bold,
+    fontsize=fontsize+4,
+    halign=:right)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1:2],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "Q flag"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+
+
+    for (label, layout) in zip([title1,title2], [gt1,gt2])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font=:bold,
+            padding = (0, 5, 20, 20),
+            halign = :right,
+            justification = :right
+            )
+    end
+
+    save(savedirname,F)
+
+end
+
+function examples_deficient(savedirname)
+
+    F = Figure(resolution=(1600,1000))
+    colsize = 655
+    rowsize1 = 50
+    rowsize2 = 840
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Inside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Inside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+
+    #unfiltered
+    spot = 7
+    var = 2
+    p = local_parameters(spots[spot],vars[var],outdir_raw)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [-2,15]
+    axes = mode_figure_flags(ga,p,rich("RECO [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) unfiltered  "
+
+    #filtered
+    p = local_parameters(spots[spot],vars[var],outdir_f6)
+    axes = mode_figure_flags(gb,p,rich("RECO [gC m", superscript("-2")," d",superscript("-1"),"]"),flag,data_tensor,ylim)
+    title2 = "(b) filtered  "
+
+    [hideydecorations!(ax,grid=:false,ticks=:false) for ax in axes]
+
+    colsize!(F.layout, 1, 100)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,1,5)
+    colgap!(F.layout,2,20)
+
+    Label(gl2[1,2], "modes            spectra          signal  ",
+    rotation=pi/2,fontsize=fontsize+4,font=:bold,halign=:right)
+    #Label(gl2[2,2], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    #Label(gl2[3,2], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    Label(gl2[1,1],
+    "RECO $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])",
+    rotation=pi/2,
+    font=:bold,
+    fontsize=fontsize+4,
+    halign=:right)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1:2],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "Q flag"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+
+
+    for (label, layout) in zip([title1,title2], [gt1,gt2])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font=:bold,
+            padding = (0, 5, 20, 20),
+            halign = :right,
+            justification = :right
+            )
+    end
+
+    save(savedirname,F)
+
+end
+
+function examples_appendix1(savedirname)
+
+    F = Figure(resolution=(1600,1000))
+    colsize = 655
+    rowsize1 = 50
+    rowsize2 = 840
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Inside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Inside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+
+    #unfiltered
+    spot = 5
+    var = 4
+    p = local_parameters(spots[spot],vars[var],outdir_raw)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [0,400]
+    axes = mode_figure_flags(ga,p,rich("SW_IN [W m", superscript("-2"),"]"),flag,data_tensor,ylim)
+    title1 = "(a) unfiltered  "
+
+    #filtered
+    p = local_parameters(spots[spot],vars[var],outdir_f6)
+    axes = mode_figure_flags(gb,p,rich("SW_IN [W m", superscript("-2"),"]"),flag,data_tensor,ylim)
+    title2 = "(b) filtered  "
+
+    [hideydecorations!(ax,grid=:false,ticks=:false) for ax in axes]
+
+    colsize!(F.layout, 1, 100)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,1,5)
+    colgap!(F.layout,2,20)
+
+    Label(gl2[1,2], "modes            spectra          signal  ",
+    rotation=pi/2,fontsize=fontsize+4,font=:bold,halign=:right)
+    #Label(gl2[2,2], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    #Label(gl2[3,2], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    Label(gl2[1,1],
+    "SW_IN $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])",
+    rotation=pi/2,
+    font=:bold,
+    fontsize=fontsize+4,
+    halign=:right)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1:2],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "Q flag"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+
+
+    for (label, layout) in zip([title1,title2], [gt1,gt2])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font=:bold,
+            padding = (0, 5, 20, 20),
+            halign = :right,
+            justification = :right
+            )
+    end
+
+    save(savedirname,F)
+
+end
+
+function examples_appendix2(savedirname)
+
+    F = Figure(resolution=(1600,1000))
+    colsize = 655
+    rowsize1 = 50
+    rowsize2 = 840
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Inside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Inside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+
+    #unfiltered
+    spot = 7
+    var = 6
+    p = local_parameters(spots[spot],vars[var],outdir_raw)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [0,30]
+    axes = mode_figure_flags(ga,p,rich("TS [deg C]"),flag,data_tensor,ylim)
+    title1 = "(a) unfiltered  "
+
+    #filtered
+    p = local_parameters(spots[spot],vars[var],outdir_f6)
+    axes = mode_figure_flags(gb,p,rich("TS [deg C]"),flag,data_tensor,ylim)
+    title2 = "(b) filtered  "
+
+    [hideydecorations!(ax,grid=:false,ticks=:false) for ax in axes]
+
+    colsize!(F.layout, 1, 100)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,1,5)
+    colgap!(F.layout,2,20)
+
+    Label(gl2[1,2], "modes            spectra          signal  ",
+    rotation=pi/2,fontsize=fontsize+4,font=:bold,halign=:right)
+    #Label(gl2[2,2], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    #Label(gl2[3,2], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    Label(gl2[1,1],
+    "TS $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])",
+    rotation=pi/2,
+    font=:bold,
+    fontsize=fontsize+4,
+    halign=:right)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1:2],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "Q flag"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+
+
+    for (label, layout) in zip([title1,title2], [gt1,gt2])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font=:bold,
+            padding = (0, 5, 20, 20),
+            halign = :right,
+            justification = :right
+            )
+    end
+
+    save(savedirname,F)
+
+end
+
+function examples_appendix3(savedirname)
+
+    F = Figure(resolution=(1600,1000))
+    colsize = 655
+    rowsize1 = 50
+    rowsize2 = 840
+
+    gt1 = F[1,2] = GridLayout(1,1, alignmode = Outside())
+    gt2 = F[1,3] = GridLayout(1,1, alignmode = Outside())
+
+    ga = F[2, 2] = GridLayout(1,1,alignmode = Inside())
+    gb = F[2, 3] = GridLayout(1,1,alignmode = Inside())
+    
+    gl1 = F[1,1] = GridLayout(1,1,alignmode = Outside())
+    gl2 = F[2,1] = GridLayout(1,1,alignmode = Outside())
+
+
+    spots = mask_IGBP(IGBP_list)[1]
+    vars = mask_vari(variables_names)[1]
+
+    #unfiltered
+    spot = 2
+    var = 7
+    p = local_parameters(spots[spot],vars[var],outdir_raw)
+    flag = flags[:,spots[spot],[6,7,5,2,1,9,8][var]]
+    ylim = [0,50]
+    axes = mode_figure_flags(ga,p,rich("SWC [%]"),flag,data_tensor,ylim)
+    title1 = "(a) unfiltered  "
+
+    #filtered
+    p = local_parameters(spots[spot],vars[var],outdir_f6)
+    axes = mode_figure_flags(gb,p,rich("SWC [%]"),flag,data_tensor,ylim)
+    title2 = "(b) filtered  "
+
+    [hideydecorations!(ax,grid=:false,ticks=:false) for ax in axes]
+
+    colsize!(F.layout, 1, 100)
+    colsize!(F.layout, 2, colsize)
+    colsize!(F.layout, 3, colsize)
+    rowsize!(F.layout,1,rowsize1)
+    rowsize!(F.layout,2,rowsize2)
+
+
+    rowgap!(F.layout,0)
+    colgap!(F.layout,1,5)
+    colgap!(F.layout,2,20)
+
+    Label(gl2[1,2], "modes            spectra          signal  ",
+    rotation=pi/2,fontsize=fontsize+4,font=:bold,halign=:right)
+    #Label(gl2[2,2], "spectra",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+    #Label(gl2[3,2], "      modes",rotation=pi/2,fontsize=fontsize+4,font=:bold)
+
+    Label(gl2[1,1],
+    "SW_IN $(spotslist[spots[spot]]) $(IGBP_list[spots[spot]])",
+    rotation=pi/2,
+    font=:bold,
+    fontsize=fontsize+4,
+    halign=:right)
+
+    elem_1 = [LineElement(color = "darkorange", linestyle = :solid,linewidth = 10)]
+    elem_2 = [LineElement(color = :darkgreen, linestyle = :solid,linewidth = 10)]
+    elem_3 = [LineElement(color = :purple, linestyle = :solid,linewidth = 10)]
+    elem_4 = MarkerElement(color = [:black,:grey90,:grey80], marker = :vline, markersize = 40,
+        points = Point2f[(0.0, 0.4), (0.4, 0.4), (0.8, 0.4)])
+
+    Legend(gl2[7,1:2],
+    [elem_1, elem_2, elem_3, elem_4],
+    ["Signal", "SSA", "NLSA", "Q flag"],
+    labelsize = fontsize+4,padding=(20,20,0,0))
+
+    Label(gl2[8,1], "   ",rotation=pi/2,fontsize=fontsize+4)
+
+
+    for (label, layout) in zip([title1,title2], [gt1,gt2])
+        Label(layout[1, 1], label,
+            fontsize = fontsize +4,
+            font=:bold,
+            padding = (0, 5, 20, 20),
+            halign = :right,
+            justification = :right
+            )
+    end
+
+    save(savedirname,F)
+
+end
+
+#examples_regular(dir*"results/regular.pdf")
+#examples_resolved(dir*"results/resolved.pdf")
+#examples_unresolved(dir*"results/unresolved.pdf")
+#examples_deficient(dir*"results/deficient.pdf")
+#examples_appendix1(dir*"results/appendix1.pdf")
+#examples_appendix2(dir*"results/appendix2.pdf")
+#examples_appendix3(dir*"results/appendix3.pdf")

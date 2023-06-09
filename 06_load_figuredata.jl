@@ -105,6 +105,40 @@ f6_entropy_scaled = characteristics["f6_entropy_scaled"]
 artifacts = characteristics["artifacts"] #boolean: does time series have a window where the qc flag is below whole-series-mean for more then a/2 ? - hints at large chunks of erroneous data
 
 
+
+#NEW SEASONAL CYCLE
+trend_data = load("/net/scratch/lschulz/data/trends.jld2")
+trends_raw = trend_data["trends_raw"]
+trends_f4 = trend_data["trends_f4"]
+trends_f6 = trend_data["trends_f6"]
+
+#Int64.(l_ssa), Int64.(l_nlsa), ssa_trends_pure, nlsa_trends_pure, ssa_trends, nlsa_trends
+
+ssa_h_raw = trends_raw[1]
+nlsa_h_raw = trends_raw[2]
+ssa_trends_pure_raw = trends_raw[3]
+nlsa_trends_pure_raw =trends_raw[4]
+ssa_trends_raw =trends_raw[5]
+nlsa_trends_raw = trends_raw[6]
+
+ssa_h_6 = trends_f6[1]
+nlsa_h_6 = trends_f6[2]
+ssa_trends_pure_6 = trends_f6[3]
+nlsa_trends_pure_6 =trends_f6[4]
+ssa_trends_6 =trends_f6[5]
+nlsa_trends_6 = trends_f6[6]
+
+ssa_h_4 = trends_f4[1]
+nlsa_h_4 = trends_f4[2]
+ssa_trends_pure_4 = trends_f4[3]
+nlsa_trends_pure_4 =trends_f4[4]
+ssa_trends_4 =trends_f4[5]
+nlsa_trends_4 = trends_f4[6]
+
+
+
+
+
 #individual time series analysis
 function local_parameters(spot,vari,outdir)
 
@@ -197,7 +231,7 @@ function local_parameters(spot,vari,outdir)
     # Frequency parameters
     freqs = fftfreq(length(t), 1.0 / Ts) |> fftshift  # Frequency values
     freqstart = findall(x -> x >= 1 / 12, freqs)[1]  # Index of the starting frequency
-    freqend = findall(x -> x >= 6, freqs)[1]  # Index of the ending frequency
+    freqend = findall(x -> x >= 7, freqs)[1]  # Index of the ending frequency
     freq_domain_N = freqs[freqstart:freqend]  # Frequency domain within the specified range
 
     # Year values
@@ -316,3 +350,5 @@ function rescale_local_parameters(p,data_tensor)
         spot,W,vari,years,varname,igbpclass,freq_domain_N,freq_domain_w,freqs_w,freqs,signal,ssa_Eof,nlsa_Eof,nlsa_eps,ssa_rec,nlsa_rec,ssa_cap_var,nlsa_cap_var,spec_signal,spec_ssa_rc,spec_nlsa_rc,spec_ssa_eof,spec_nlsa_eof,gaussian_ssa,gaussian_nlsa,li_harmonics_ssa,li_harmonics_nlsa,ssa_trend_harm,nlsa_trend_harm,freq_ssa,freq_nlsa,ssa_harm_var,nlsa_harm_var,spec_ssa,spec_res_ssa,spec_nlsa,spec_res_nlsa
     ]
 end
+
+
