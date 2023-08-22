@@ -1,3 +1,21 @@
+repository structure
+
+main functionalities
+struct of dimension reduction
+running of dimension reduction
+processing of the results
+saving the results
+loading the results
+plotting motivation
+plotting example
+plotting heatmaps
+plotting workflow
+
+
+todo
+move preprocessing to toolkit
+readme
+
 # Code Descriptions
 
 This README provides an overview of the content in each of the Julia files included in this repository.
