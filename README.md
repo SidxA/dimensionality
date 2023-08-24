@@ -1,3 +1,21 @@
+repository structure
+
+main functionalities
+struct of dimension reduction
+running of dimension reduction
+processing of the results
+saving the results
+loading the results
+plotting motivation
+plotting example
+plotting heatmaps
+plotting workflow
+
+
+todo
+move preprocessing to toolkit
+readme
+
 # Code Descriptions
 
 This README provides an overview of the content in each of the Julia files included in this repository.
@@ -63,6 +81,34 @@ save(savedirname,F)`
 - includes the code for generating Figure 3
 - `heatmap_numbers` produces heatmap with numbers, focused solely on differences in extracted number of harmonics between different noise filters
 - `characterization_heatmap` also includes little symbolls for noise content, signal sinusoidality, signal entropy (NN sample entropy) and quality flag artefacts
+
+## 10_workflow_figures.jl
+
+- pictures used in the workflow diagram
+
+# DATA
+
+
+time series raw data and lowpass filtered dataand description of locations,variables,ecosystem types, qc quality flags
+`"/net/scratch/lschulz/data/time_series.jld2"`
+
+individual dimension-reduction results
+`outdir_raw = "/net/scratch/lschulz/data/dimensionreduction/raw/"
+outdir_f3 = "/net/scratch/lschulz/data/dimensionreduction/lowpass3/"
+outdir_f4 = "/net/scratch/lschulz/data/dimensionreduction/lowpass4/"
+outdir_f6 = "/net/scratch/lschulz/data/dimensionreduction/lowpass6/"`
+
+seasonal cycle prior to the filter of only considering intact mode pairs (for old heatmap)
+`"/net/scratch/lschulz/data/seasonal_cycle.jld2"`
+
+
+data characteristics 
+`"/net/scratch/lschulz/data/data_characteristics_without_f3.jld2"`
+
+new seasonal cycle information based on the pair filtering (for new heatmap)
+`"/net/scratch/lschulz/data/trends.jld2"`
+
+
 
 # Theory
 
